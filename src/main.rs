@@ -18,8 +18,8 @@ fn main() {
             break;
         }
 
-        if let Some(val) = command.split_whitespace().next() {
-            print!("{}", val);
+        if command.starts_with("echo") {
+            println!("{}", &command[5..]);
         } else {
             println!("{}: command not found ", command.trim());
         }
