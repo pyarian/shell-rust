@@ -18,9 +18,17 @@ fn main() {
             break;
         }
 
-        if command.starts_with("echo") || command.starts_with("exit") || command.starts_with("type")
-        {
-            println!("{} is a shell builtin", command.trim());
+        if command.starts_with("type") {
+            let c = command.split_whitespace().nth(1).unwrap();
+
+            match c {
+                "echo" | "exit" | "type" => {
+                    println!("{} is a shell builtin", c);
+                }
+                _ => {
+                    println!("{}: command not found ", c.trim());
+                }
+            }
         } else {
             println!("{}: command not found ", command.trim());
         }
