@@ -30,7 +30,7 @@ fn main() {
                 }
             }
         } else {
-            println!("{}: command not found ", command.trim());
+            println!("{}: not found", command.trim());
         }
     }
 }
