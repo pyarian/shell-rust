@@ -17,6 +17,11 @@ fn main() {
         if command == "exit" {
             break;
         }
-        println!("{}: command not found ", command.trim());
+
+        if let Some(val) = command.split_whitespace().next() {
+            print!("{}", val);
+        } else {
+            println!("{}: command not found ", command.trim());
+        }
     }
 }
