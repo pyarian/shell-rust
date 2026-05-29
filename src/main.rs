@@ -19,7 +19,9 @@ fn main() {
         }
         let c = command.split_whitespace().nth(1).unwrap();
 
-        if command.starts_with("type") {
+        if command.starts_with("echo") {
+            println!("{}", command[5..]);
+        } else if command.starts_with("type") {
             match c {
                 "echo" | "exit" | "type" => {
                     println!("{} is a shell builtin", c);
@@ -29,7 +31,7 @@ fn main() {
                 }
             }
         } else {
-            println!("{}: not found", c.trim());
+            println!("{} not found", command[5..]);
         }
     }
 }
