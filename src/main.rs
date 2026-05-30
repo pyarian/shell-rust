@@ -19,7 +19,27 @@ fn main() {
         }
 
         if command.starts_with("echo ") {
-            println!("{}", &command[5..]);
+            let input = &command[5..];
+            let mut result = String::new();
+            let mut in_quotes = false;
+            let mut prev_was_space = false;
+
+            for ch in input.chars() {
+                match ch {
+                    '\'' => in_quotes = !in_quotes,
+                    ' ' if !in_quotes => {
+                        if !prev_was_space {
+                            result.push(' ');
+                        }
+                        prev_was_space = true;
+                        continue;
+                    }
+                    _ => result.push(ch),
+                }
+                prev_was_space = false;
+            }
+
+            println!("{}", result.trim());
         } else if command.starts_with("type ") {
             let cmd = command.split_whitespace().nth(1).unwrap();
 
