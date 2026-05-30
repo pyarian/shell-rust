@@ -64,7 +64,8 @@ fn main() {
             let new_dir = command.split_whitespace().nth(1).unwrap();
 
             if Path::new(&new_dir) == '~' {
-                std::env::home_dir().unwrap();
+                let home_dir = std::env::home_dir().unwrap();
+                std::env::set_current_dir(home_dir).unwrap();
             } else if Path::new(new_dir).exists() {
                 std::env::set_current_dir(new_dir).unwrap();
             } else {
