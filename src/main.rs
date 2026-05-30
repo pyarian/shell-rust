@@ -27,28 +27,32 @@ fn main() {
                     println!("{} is a shell builtin", cmd);
                 }
                 _ => {
-                    println!("{}: not found", cmd);
-                }
-            }
+                    let path_var = match std::env::var("PATH") {
+                        Ok(p) => p,
+                        Err(_) => {
+                            println!("PATH not found");
+                            continue;
+                        }
+                    };
 
-            let path = match std::env::var("PATH") {
-                Ok(p) => p,
-                Err(_) => {
-                    println!("PATH not found");
-                    return;
-                }
-            }
-            .split(':');
+                    let mut found = false;
 
-            for dir in path {
-                let full_path = Path::new(dir).join(cmd);
+                    for dir in path_var.split(':') {
+                        let full_path = Path::new(dir).join(cmd);
 
-                if full_path.exists() {
-                    let metadata = std::fs::metadata(&full_path).unwrap();
-                    let permissions = metadata.permissions();
-                    if metadata.permissions().mode() & 0o111 != 0 {
-                        println!("{} is {}", cmd, full_path.display());
-                        break;
+                        if full_path.exists() {
+                            let metadata = std::fs::metadata(&full_path).unwrap();
+
+                            if metadata.permissions().mode() & 0o111 != 0 {
+                                println!("{} is {}", cmd, full_path.display());
+                                found = true;
+                                break;
+                            }
+                        }
+                    }
+
+                    if !found {
+                        println!("{}: not found", cmd);
                     }
                 }
             }
