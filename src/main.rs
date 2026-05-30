@@ -61,10 +61,10 @@ fn main() {
             let current_folder = std::env::current_dir().unwrap();
             println!("{}", current_folder.display());
         } else if command.starts_with("cd") {
-            let new_dir = command.split_whitespace().nth(1).unwrap();
+            let new_dir = path::command.split_whitespace().nth(1).unwrap();
 
-            if new_dir.exists() {
-                std::env::set_current_dir(new_dir);
+            if Path::new(new_dir).exists() {
+                std::env::set_current_dir(new_dir).unwrap();
             } else {
                 println!("{}: No such file or directory", new_dir)
             }
