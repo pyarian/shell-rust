@@ -1,7 +1,8 @@
 use std::{
-    fs::Metadata,
+    //fs::Metadata,
     io::{self, Write},
     os::unix::fs::PermissionsExt,
+    path::Path,
 };
 
 fn main() {
