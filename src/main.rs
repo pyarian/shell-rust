@@ -2,7 +2,7 @@ use std::{
     //fs::Metadata,
     io::{self, Write},
     os::unix::fs::PermissionsExt,
-    path::Path,
+    path::{self, Path},
 };
 
 fn main() {
@@ -57,6 +57,9 @@ fn main() {
                     }
                 }
             }
+        } else if command.starts_with("pwd") {
+            let current_folder = std::env::current_dir().unwrap();
+            println!("{}", current_folder);
         } else {
             let parts: Vec<&str> = command.split_whitespace().collect();
             let program = parts[0];
