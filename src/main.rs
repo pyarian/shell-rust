@@ -80,7 +80,10 @@ fn main() {
             }
 
             if let Some(path) = found_path {
-                let mut child = std::process::Command::new(path).args(args).spawn().unwrap();
+                let mut child = std::process::Command::new(program)
+                    .args(args)
+                    .spawn()
+                    .unwrap();
                 child.wait().unwrap();
             } else {
                 println!("{}: not found", program);
