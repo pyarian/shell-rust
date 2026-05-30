@@ -2,6 +2,7 @@ use std::{
     //fs::Metadata,
     io::{self, Write},
     os::unix::fs::PermissionsExt,
+    panic::Full,
     path::Path,
 };
 
@@ -58,7 +59,33 @@ fn main() {
                 }
             }
         } else {
-            println!("{}: not found", command);
+            let parts = command.split_whitespace().unwrap();
+            let program = parts[0];
+            let args = &parts[1..];
+
+            let path_var = std::env::var("PATH").unwrap_or_default();
+
+            let mut found_path = None;
+
+            for dir in path_var.split(':') {
+                let full_path = Path::new(dir).join(cmd);
+
+                if full_path.exists() {
+                    let metadata = std::fs::metadata(&full_path).unwrap();
+
+                    if metadata.permissions().mode() & 0o111 != 0 {
+                        found_path = Some(full_path);
+                        break;
+                    }
+                }
+            }
+
+            if let Some(path) = found_path {
+                let mut child = std::process::Command::new(path).args(args).spawn().unwrap();
+                child.wait().unwrap();
+            } else {
+                println!("{}: not found", program);
+            }
         }
     }
 }
