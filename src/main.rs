@@ -63,7 +63,7 @@ fn main() {
         } else if command.starts_with("cd") {
             let new_dir = command.split_whitespace().nth(1).unwrap();
 
-            if Path::new(&new_dir) == '~' {
+            if new_dir == '~' {
                 let home_dir = std::env::home_dir().unwrap();
                 std::env::set_current_dir(home_dir).unwrap();
             } else if Path::new(new_dir).exists() {
