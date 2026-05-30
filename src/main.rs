@@ -2,7 +2,6 @@ use std::{
     //fs::Metadata,
     io::{self, Write},
     os::unix::fs::PermissionsExt,
-    panic::Full,
     path::Path,
 };
 
@@ -59,7 +58,7 @@ fn main() {
                 }
             }
         } else {
-            let parts = command.split_whitespace().unwrap();
+            let parts = command.split_whitespace().collect();
             let program = parts[0];
             let args = &parts[1..];
 
@@ -68,7 +67,7 @@ fn main() {
             let mut found_path = None;
 
             for dir in path_var.split(':') {
-                let full_path = Path::new(dir).join(cmd);
+                let full_path = Path::new(dir).join(program);
 
                 if full_path.exists() {
                     let metadata = std::fs::metadata(&full_path).unwrap();
