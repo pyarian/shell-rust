@@ -58,7 +58,7 @@ fn main() {
                 }
             }
         } else {
-            let parts = command.split_whitespace().collect();
+            let parts: Vec<&str> = command.split_whitespace().collect();
             let program = parts[0];
             let args = &parts[1..];
 
