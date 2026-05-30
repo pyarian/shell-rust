@@ -5,6 +5,31 @@ use std::{
     path::{self, Path},
 };
 
+fn parse_args(input: &str) -> Vec<String> {
+    let mut args: Vec<String> = Vec::new();
+    let mut current = String::new();
+    let mut in_quotes = false;
+
+    for ch in input.chars() {
+        match ch {
+            '\'' => in_quotes = !in_quotes,
+            ' ' if !in_quotes => {
+                if !current.is_empty() {
+                    args.push(current.clone());
+                    current.clear();
+                }
+            }
+            _ => current.push(ch),
+        }
+    }
+
+    if !current.is_empty() {
+        args.push(current);
+    }
+
+    args
+}
+
 fn main() {
     loop {
         print!("$ ");
@@ -19,27 +44,8 @@ fn main() {
         }
 
         if command.starts_with("echo ") {
-            let input = &command[5..];
-            let mut result = String::new();
-            let mut in_quotes = false;
-            let mut prev_was_space = false;
-
-            for ch in input.chars() {
-                match ch {
-                    '\'' => in_quotes = !in_quotes,
-                    ' ' if !in_quotes => {
-                        if !prev_was_space {
-                            result.push(' ');
-                        }
-                        prev_was_space = true;
-                        continue;
-                    }
-                    _ => result.push(ch),
-                }
-                prev_was_space = false;
-            }
-
-            println!("{}", result.trim());
+            let parts = parse_args(&command[5..]);
+            println!("{}", parts.join(" "));
         } else if command.starts_with("type ") {
             let cmd = command.split_whitespace().nth(1).unwrap();
 
@@ -92,8 +98,8 @@ fn main() {
                 println!("{}: No such file or directory", new_dir)
             }
         } else {
-            let parts: Vec<&str> = command.split_whitespace().collect();
-            let program = parts[0];
+            let parts = parse_args(&command);
+            let program = &parts[0];
             let args = &parts[1..];
 
             let path_var = std::env::var("PATH").unwrap_or_default();
