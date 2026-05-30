@@ -59,7 +59,7 @@ fn main() {
             }
         } else if command.starts_with("pwd") {
             let current_folder = std::env::current_dir().unwrap();
-            println!("{}", current_folder);
+            println!("{}", current_folder.display());
         } else {
             let parts: Vec<&str> = command.split_whitespace().collect();
             let program = parts[0];
