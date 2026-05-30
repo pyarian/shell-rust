@@ -24,7 +24,7 @@ fn main() {
             let cmd = command.split_whitespace().nth(1).unwrap();
 
             match cmd {
-                "echo" | "exit" | "type" => {
+                "echo" | "exit" | "type" | "pwd" => {
                     println!("{} is a shell builtin", cmd);
                 }
                 _ => {
