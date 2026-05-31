@@ -13,7 +13,7 @@ fn parse_args(input: &str) -> Vec<String> {
 
     //if \ is active then the immediate effect
     for ch in input.chars() {
-        if ch == '\\' && escaped != true {
+        if ch == '\\' && escaped != true && quote_char == None {
             escaped = true;
             continue;
         }
