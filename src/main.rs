@@ -9,8 +9,15 @@ fn parse_args(input: &str) -> Vec<String> {
     let mut args: Vec<String> = Vec::new();
     let mut current = String::new();
     let mut quote_char: Option<char> = None;
+    let mut escaped = false;
 
     for ch in input.chars() {
+        if escaped {
+            current.push(ch);
+            escaped = false;
+            continue;
+        }
+
         match quote_char {
             // currently inside quotes
             Some(q) => {
@@ -21,20 +28,17 @@ fn parse_args(input: &str) -> Vec<String> {
                 }
             }
             // not inside quotes
-            None => {
-                match ch {
-                    '\'' | '"' => {
-                        quote_char = Some(ch); // opening quote
+            None => match ch {
+                '\'' | '"' => quote_char = Some(ch),
+                '\\' => escaped = true,
+                ' ' => {
+                    if !current.is_empty() {
+                        args.push(current.clone());
+                        current.clear();
                     }
-                    ' ' => {
-                        if !current.is_empty() {
-                            args.push(current.clone());
-                            current.clear();
-                        }
-                    }
-                    _ => current.push(ch),
                 }
-            }
+                _ => current.push(ch),
+            },
         }
     }
 
