@@ -15,6 +15,7 @@ fn parse_args(input: &str) -> Vec<String> {
     for ch in input.chars() {
         if ch == '\\' {
             escaped = true;
+            continue;
         }
         if escaped {
             current.push(ch);
