@@ -8,18 +8,33 @@ use std::{
 fn parse_args(input: &str) -> Vec<String> {
     let mut args: Vec<String> = Vec::new();
     let mut current = String::new();
-    let mut in_quotes = false;
+    let mut quote_char: Option<char> = None;
 
     for ch in input.chars() {
-        match ch {
-            '\'' => in_quotes = !in_quotes,
-            ' ' if !in_quotes => {
-                if !current.is_empty() {
-                    args.push(current.clone());
-                    current.clear();
+        match quote_char {
+            // currently inside quotes
+            Some(q) => {
+                if ch == q {
+                    quote_char = None; // closing quote
+                } else {
+                    current.push(ch); // literal character
                 }
             }
-            _ => current.push(ch),
+            // not inside quotes
+            None => {
+                match ch {
+                    '\'' | '"' => {
+                        quote_char = Some(ch); // opening quote
+                    }
+                    ' ' => {
+                        if !current.is_empty() {
+                            args.push(current.clone());
+                            current.clear();
+                        }
+                    }
+                    _ => current.push(ch),
+                }
+            }
         }
     }
 
