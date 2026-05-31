@@ -13,11 +13,7 @@ fn parse_args(input: &str) -> Vec<String> {
 
     //if \ is active then the immediate effect
     for ch in input.chars() {
-        if ch == '\\' && escaped != true && quote_char == None {
-            escaped = true;
-            continue;
-        }
-        if escaped {
+        if escaped && quote_char == None {
             current.push(ch);
             escaped = false;
             continue;
@@ -26,7 +22,18 @@ fn parse_args(input: &str) -> Vec<String> {
         match quote_char {
             // currently inside quotes
             Some(q) => {
-                if ch == q {
+                if escaped {
+                    // inside double quotes, \ only escapes " and \
+                    if q == '"' && (ch == '"' || ch == '\\') {
+                        current.push(ch); // drop the backslash, push literal
+                    } else {
+                        current.push('\\'); // backslash was literal, keep it
+                        current.push(ch); // push the character too
+                    }
+                    escaped = false;
+                } else if ch == '\\' && q == '"' {
+                    escaped = true; // only activate escape inside double quotes
+                } else if ch == q {
                     quote_char = None; // closing quote
                 } else {
                     current.push(ch); // literal character
@@ -35,7 +42,7 @@ fn parse_args(input: &str) -> Vec<String> {
             // not inside quotes
             None => match ch {
                 '\'' | '"' => quote_char = Some(ch),
-                //'\\' => escaped = true,
+                '\\' => escaped = true,
                 ' ' => {
                     if !current.is_empty() {
                         args.push(current.clone());
