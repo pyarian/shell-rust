@@ -11,7 +11,11 @@ fn parse_args(input: &str) -> Vec<String> {
     let mut quote_char: Option<char> = None;
     let mut escaped = false;
 
+    //if \ is active then the immediate effect
     for ch in input.chars() {
+        if ch == '\\' {
+            escaped = true;
+        }
         if escaped {
             current.push(ch);
             escaped = false;
@@ -30,7 +34,7 @@ fn parse_args(input: &str) -> Vec<String> {
             // not inside quotes
             None => match ch {
                 '\'' | '"' => quote_char = Some(ch),
-                '\\' => escaped = true,
+                //'\\' => escaped = true,
                 ' ' => {
                     if !current.is_empty() {
                         args.push(current.clone());
