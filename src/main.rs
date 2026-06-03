@@ -1,5 +1,5 @@
 use std::{
-    //fs::Metadata,
+    fs::File,
     io::{self, Write},
     os::unix::fs::PermissionsExt,
     path::{self, Path},
@@ -61,6 +61,31 @@ fn parse_args(input: &str) -> Vec<String> {
     args
 }
 
+struct Redirect {
+    stdout: Option<String>,
+}
+
+fn parse_redirect(input: &str) -> (String,Redirect) {
+
+    if let Some(pos) = input.find("1>") {
+        let cmd = input[..pos].trim().to_string();
+        let file = input[pos+2..].trim().to_string();
+        return (cmd,Redirect {stdout:Some(file)});
+    }
+
+    if let some(pos) = input.find(">") {
+        let cmd = input[..pos].trim().to_string();
+        let file = input[pos+2..].trim.to_string();
+        return (cmd,Redirect {stdout:{Some(file)}})
+    }
+
+    (input.trim().to_string(),Redirect {stdout:None})
+}
+
+
+
+
+
 fn main() {
     loop {
         print!("$ ");
@@ -70,13 +95,25 @@ fn main() {
         io::stdin().read_line(&mut command).unwrap();
         command = command.trim().to_string();
 
+        let (command,redirect) = parse_redirect(&command);
+        let command=command.as_str();
+
+        let stdout_file = redirect.stdout.as_ref().map(|path| {
+            File::create(path).unwrap()
+        });
+
         if command == "exit" {
             break;
         }
 
         if command.starts_with("echo ") {
             let parts = parse_args(&command[5..]);
-            println!("{}", parts.join(" "));
+            let output = parts.join(" ");
+
+            match stdout file {
+                Some(mut file) => writeln!(file,"{}",output).unwrap,
+                None => println!("{}",output),
+            }
         } else if command.starts_with("type ") {
             let cmd = command.split_whitespace().nth(1).unwrap();
 
@@ -152,13 +189,15 @@ fn main() {
 
             if let Some(path) = found_path {
                 let mut child = std::process::Command::new(program)
-                    .args(args)
-                    .spawn()
-                    .unwrap();
-                child.wait().unwrap();
-            } else {
-                println!("{}: not found", program);
+                    
+                cmd.args(args);
+
+                if let Some(file) = stdout_file {
+                    cmd.stdout(file);
+                }
+
+                cmd.spawn().unwrap().wait().unwrap();
             }
-        }
+            
     }
 }
