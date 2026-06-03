@@ -67,15 +67,15 @@ fn parse_redirect(input: &str) -> (String, Redirect) {
     if let Some(pos) = input.find("1>") {
         let cmd = input[..pos].trim().to_string();
         let file = input[pos + 2..].trim().to_string();
-        return (cmd, Redirect { stdout: Some(file) });
+        return (cmd, Redirect { stdout: Some(file),stderr:None });
     } else if let Some(pos) = input.find("2>") {
         let cmd = input[..pos].trim().to_string();
         let file = input[pos + 2..].trim().to_string(); 
-        return (cmd, Redirect { stderr: Some(file) });
+        return (cmd, Redirect { stdout:None, stderr: Some(file) });
     } else if let Some(pos) = input.find(">") {
         let cmd = input[..pos].trim().to_string();
         let file = input[pos + 1..].trim().to_string(); 
-        return (cmd, Redirect { stdout: Some(file) });
+        return (cmd, Redirect { stdout: Some(file), stderr:None });
     }
 
     
