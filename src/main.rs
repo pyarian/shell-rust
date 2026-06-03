@@ -2,7 +2,7 @@ use std::{
     fs::File,
     io::{self, Write},
     os::unix::fs::PermissionsExt,
-    path::{self, Path},
+    path::Path,
 };
 
 fn parse_args(input: &str) -> Vec<String> {
@@ -11,7 +11,6 @@ fn parse_args(input: &str) -> Vec<String> {
     let mut quote_char: Option<char> = None;
     let mut escaped = false;
 
-    //if \ is active then the immediate effect
     for ch in input.chars() {
         if escaped && quote_char == None {
             current.push(ch);
@@ -20,26 +19,23 @@ fn parse_args(input: &str) -> Vec<String> {
         }
 
         match quote_char {
-            // currently inside quotes
             Some(q) => {
                 if escaped {
-                    // inside double quotes, \ only escapes " and \
                     if q == '"' && (ch == '"' || ch == '\\') {
-                        current.push(ch); // drop the backslash, push literal
+                        current.push(ch);
                     } else {
-                        current.push('\\'); // backslash was literal, keep it
-                        current.push(ch); // push the character too
+                        current.push('\\');
+                        current.push(ch);
                     }
                     escaped = false;
                 } else if ch == '\\' && q == '"' {
-                    escaped = true; // only activate escape inside double quotes
+                    escaped = true;
                 } else if ch == q {
-                    quote_char = None; // closing quote
+                    quote_char = None;
                 } else {
-                    current.push(ch); // literal character
+                    current.push(ch);
                 }
             }
-            // not inside quotes
             None => match ch {
                 '\'' | '"' => quote_char = Some(ch),
                 '\\' => escaped = true,
@@ -65,26 +61,21 @@ struct Redirect {
     stdout: Option<String>,
 }
 
-fn parse_redirect(input: &str) -> (String,Redirect) {
-
+fn parse_redirect(input: &str) -> (String, Redirect) {
     if let Some(pos) = input.find("1>") {
         let cmd = input[..pos].trim().to_string();
-        let file = input[pos+2..].trim().to_string();
-        return (cmd,Redirect {stdout:Some(file)});
+        let file = input[pos + 2..].trim().to_string();
+        return (cmd, Redirect { stdout: Some(file) });
     }
 
-    if let some(pos) = input.find(">") {
+    if let Some(pos) = input.find(">") {
         let cmd = input[..pos].trim().to_string();
-        let file = input[pos+2..].trim.to_string();
-        return (cmd,Redirect {stdout:{Some(file)}})
+        let file = input[pos + 1..].trim().to_string(); 
+        return (cmd, Redirect { stdout: Some(file) });
     }
 
-    (input.trim().to_string(),Redirect {stdout:None})
+    (input.trim().to_string(), Redirect { stdout: None })
 }
-
-
-
-
 
 fn main() {
     loop {
@@ -95,8 +86,8 @@ fn main() {
         io::stdin().read_line(&mut command).unwrap();
         command = command.trim().to_string();
 
-        let (command,redirect) = parse_redirect(&command);
-        let command=command.as_str();
+        let (command, redirect) = parse_redirect(&command);
+        let command = command.as_str();
 
         let stdout_file = redirect.stdout.as_ref().map(|path| {
             File::create(path).unwrap()
@@ -110,9 +101,9 @@ fn main() {
             let parts = parse_args(&command[5..]);
             let output = parts.join(" ");
 
-            match stdout file {
-                Some(mut file) => writeln!(file,"{}",output).unwrap,
-                None => println!("{}",output),
+            match stdout_file {
+                Some(mut file) => writeln!(file, "{}", output).unwrap(), 
+                None => println!("{}", output),
             }
         } else if command.starts_with("type ") {
             let cmd = command.split_whitespace().nth(1).unwrap();
@@ -171,7 +162,6 @@ fn main() {
             let args = &parts[1..];
 
             let path_var = std::env::var("PATH").unwrap_or_default();
-
             let mut found_path = None;
 
             for dir in path_var.split(':') {
@@ -187,9 +177,8 @@ fn main() {
                 }
             }
 
-            if let Some(path) = found_path {
-                let mut child = std::process::Command::new(program)
-                    
+            if let Some(_path) = found_path {
+                let mut cmd = std::process::Command::new(program); // ✅
                 cmd.args(args);
 
                 if let Some(file) = stdout_file {
@@ -197,7 +186,9 @@ fn main() {
                 }
 
                 cmd.spawn().unwrap().wait().unwrap();
+            } else {
+                println!("{}: not found", program);
             }
-            
+        }
     }
 }
