@@ -151,7 +151,7 @@ fn main() {
             let cmd = command.split_whitespace().nth(1).unwrap();
 
             match cmd {
-                "echo" | "exit" | "type" | "pwd" | "cd" => {
+                "echo" | "exit" | "type" | "pwd" | "cd" | "jobs" => {
                     println!("{} is a shell builtin", cmd);
                 }
                 _ => {
@@ -184,6 +184,8 @@ fn main() {
                     }
                 }
             }
+        } else if command=="jobs" {
+
         } else if command.starts_with("pwd") {
             let current_folder = std::env::current_dir().unwrap();
             println!("{}", current_folder.display());
