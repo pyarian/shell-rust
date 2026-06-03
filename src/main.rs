@@ -71,30 +71,30 @@ struct Redirect {
 fn parse_redirect(input: &str) -> (String, Redirect) {
 
     if let Some(pos) = input.find("1>>") {
-        let cmd = input[..pos].trim().to_string();
-        let file = input[pos + 3..].trim().to_string();
-        return (cmd, Redirect { stdout: Some((file, RedirectMode::Append)),stderr:None });
-    }else if let Some(pos) = input.find(">>") {
-        let cmd = input[..pos].trim().to_string();
-        let file = input[pos + 2..].trim().to_string();
-        return (cmd, Redirect { stdout: Some((file, RedirectMode::Append)),stderr:None });
-    }else if let Some(pos) = input.find("1>") {
-        let cmd = input[..pos].trim().to_string();
-        let file = input[pos + 2..].trim().to_string();
-        return (cmd, Redirect { stdout: Some((file, RedirectMode::Overwrite)),stderr:None });
-    } else if let Some(pos) = input.find("2>>") {
-        let cmd = input[..pos].trim().to_string();
-        let file = input[pos + 3..].trim().to_string(); 
-        return (cmd, Redirect { stdout:None, stderr: Some((file, RedirectMode::Append)) });
-    } else if let Some(pos) = input.find("2>") {
-        let cmd = input[..pos].trim().to_string();
-        let file = input[pos + 2..].trim().to_string(); 
-        return (cmd, Redirect { stdout:None, stderr: Some((file, RedirectMode::Overwrite)) });
-    } else if let Some(pos) = input.find(">") {
-        let cmd = input[..pos].trim().to_string();
-        let file = input[pos + 1..].trim().to_string(); 
-        return (cmd, Redirect { stdout: Some((file, RedirectMode::Overwrite)), stderr:None });
-    }
+    let cmd = input[..pos].trim().to_string();
+    let file = input[pos + 3..].trim().to_string();
+    return (cmd, Redirect { stdout: Some((file, RedirectMode::Append)), stderr: None });
+} else if let Some(pos) = input.find("2>>") {
+    let cmd = input[..pos].trim().to_string();
+    let file = input[pos + 3..].trim().to_string();
+    return (cmd, Redirect { stdout: None, stderr: Some((file, RedirectMode::Append)) });
+} else if let Some(pos) = input.find(">>") {
+    let cmd = input[..pos].trim().to_string();
+    let file = input[pos + 2..].trim().to_string();
+    return (cmd, Redirect { stdout: Some((file, RedirectMode::Append)), stderr: None });
+} else if let Some(pos) = input.find("2>") {
+    let cmd = input[..pos].trim().to_string();
+    let file = input[pos + 2..].trim().to_string();
+    return (cmd, Redirect { stdout: None, stderr: Some((file, RedirectMode::Overwrite)) });
+} else if let Some(pos) = input.find("1>") {
+    let cmd = input[..pos].trim().to_string();
+    let file = input[pos + 2..].trim().to_string();
+    return (cmd, Redirect { stdout: Some((file, RedirectMode::Overwrite)), stderr: None });
+} else if let Some(pos) = input.find(">") {
+    let cmd = input[..pos].trim().to_string();
+    let file = input[pos + 1..].trim().to_string();
+    return (cmd, Redirect { stdout: Some((file, RedirectMode::Overwrite)), stderr: None });
+}
     
 
     (input.trim().to_string(), Redirect { stdout: None , stderr:None})
