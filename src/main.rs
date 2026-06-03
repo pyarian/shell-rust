@@ -67,6 +67,12 @@ struct Redirect {
     stderr: Option<(String, RedirectMode)>,
 }
 
+struct Job {
+    job_number : u32,
+    process_id : u32,
+    command : String,
+}
+
 
 fn parse_redirect(input: &str) -> (String, Redirect) {
 
@@ -100,7 +106,13 @@ fn parse_redirect(input: &str) -> (String, Redirect) {
     (input.trim().to_string(), Redirect { stdout: None , stderr:None})
 }
 
+
+
+
 fn main() {
+
+    let mut jobs : Vec<Job> = Vec::new();
+
     loop {
         print!("$ ");
         io::stdout().flush().unwrap();
@@ -201,9 +213,16 @@ fn main() {
                 println!("{}: No such file or directory", new_dir)
             }
         } else {
-            let parts = parse_args(&command);
-            let program = &parts[0];
-            let args = &parts[1..];
+            let mut parts = parse_args(&command);
+            let background = parts.last().map(|x| x=="&").unwrap_or(false);
+            if background {
+                parts.pop();
+            }
+            let program = parts[0].clone();
+            let args = &parts[1..].to_vecI();
+
+            
+            
 
             let path_var = std::env::var("PATH").unwrap_or_default();
             let mut found_path = None;
@@ -232,7 +251,16 @@ fn main() {
                     cmd.stderr(file);
                 }
 
-                cmd.spawn().unwrap().wait().unwrap();
+                if background {
+                    let child = cmd.spawn().unwrap();
+                    let job_number = jobs.len() as u32 + 1;
+                    let pid = child.id();
+                    println!("[{}] {}", job_number, pid);
+                    jobs.push(Job { job_number, process_id: pid, command: program.to_string() });
+                } else {
+                    let mut child = cmd.spawn().unwrap();
+                    child.wait().unwrap();
+                }
             } else {
                 println!("{}: not found", program);
             }
