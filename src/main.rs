@@ -57,17 +57,31 @@ fn parse_args(input: &str) -> Vec<String> {
     args
 }
 
+enum RedirectMode {
+    Overwrite,
+    Append,
+}
+
 struct Redirect {
-    stdout: Option<String>,
-    stderr: Option<String>
+    stdout: Option<(String, RedirectMode)>,
+    stderr: Option<String>,
 }
 
 
 fn parse_redirect(input: &str) -> (String, Redirect) {
-    if let Some(pos) = input.find("1>") {
+
+    if let Some(pos) = input.find("1>>") {
+        let cmd = input[..pos].trim().to_string();
+        let file = input[pos + 3..].trim().to_string();
+        return (cmd, Redirect { stdout: Some((file, RedirectMode::Append)),stderr:None });
+    }else if let Some(pos) = input.find(">>") {
         let cmd = input[..pos].trim().to_string();
         let file = input[pos + 2..].trim().to_string();
-        return (cmd, Redirect { stdout: Some(file),stderr:None });
+        return (cmd, Redirect { stdout: Some((file, RedirectMode::Append)),stderr:None });
+    }else if let Some(pos) = input.find("1>") {
+        let cmd = input[..pos].trim().to_string();
+        let file = input[pos + 2..].trim().to_string();
+        return (cmd, Redirect { stdout: Some((file, RedirectMode::Append)),stderr:None });
     } else if let Some(pos) = input.find("2>") {
         let cmd = input[..pos].trim().to_string();
         let file = input[pos + 2..].trim().to_string(); 
@@ -75,9 +89,8 @@ fn parse_redirect(input: &str) -> (String, Redirect) {
     } else if let Some(pos) = input.find(">") {
         let cmd = input[..pos].trim().to_string();
         let file = input[pos + 1..].trim().to_string(); 
-        return (cmd, Redirect { stdout: Some(file), stderr:None });
+        return (cmd, Redirect { stdout: Some((file, RedirectMode::Append)), stderr:None });
     }
-
     
 
     (input.trim().to_string(), Redirect { stdout: None , stderr:None})
@@ -95,9 +108,16 @@ fn main() {
         let (command, redirect) = parse_redirect(&command);
         let command = command.as_str();
 
-        let stdout_file = redirect.stdout.as_ref().map(|path| {
-            File::create(path).unwrap()
-        });
+        let stdout_file = redirect.stdout.as_ref().map(|filename,mode| {
+            match mode {
+                RedirectMode::Overwrite => File::create(filename).unwrap(),
+                RedirectMode::Append => File::options()
+                    .Append(true)
+                    .create(true)
+                    .open(filename)
+                    .unwrap(),
+            }
+        })
 
         let stderr_file = redirect.stderr.as_ref().map(|path|{
             File::create(path).unwrap()
