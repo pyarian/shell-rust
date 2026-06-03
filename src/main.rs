@@ -89,7 +89,7 @@ fn parse_redirect(input: &str) -> (String, Redirect) {
     } else if let Some(pos) = input.find("2>") {
         let cmd = input[..pos].trim().to_string();
         let file = input[pos + 2..].trim().to_string(); 
-        return (cmd, Redirect { stdout:None, stderr: Some(file) });
+        return (cmd, Redirect { stdout:None, stderr: Some((file, RedirectMode::Append)) });
     } else if let Some(pos) = input.find(">") {
         let cmd = input[..pos].trim().to_string();
         let file = input[pos + 1..].trim().to_string(); 
