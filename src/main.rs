@@ -81,7 +81,7 @@ fn parse_redirect(input: &str) -> (String, Redirect) {
     }else if let Some(pos) = input.find("1>") {
         let cmd = input[..pos].trim().to_string();
         let file = input[pos + 2..].trim().to_string();
-        return (cmd, Redirect { stdout: Some((file, RedirectMode::Append)),stderr:None });
+        return (cmd, Redirect { stdout: Some((file, RedirectMode::Overwrite)),stderr:None });
     } else if let Some(pos) = input.find("2>>") {
         let cmd = input[..pos].trim().to_string();
         let file = input[pos + 3..].trim().to_string(); 
@@ -89,11 +89,11 @@ fn parse_redirect(input: &str) -> (String, Redirect) {
     } else if let Some(pos) = input.find("2>") {
         let cmd = input[..pos].trim().to_string();
         let file = input[pos + 2..].trim().to_string(); 
-        return (cmd, Redirect { stdout:None, stderr: Some((file, RedirectMode::Append)) });
+        return (cmd, Redirect { stdout:None, stderr: Some((file, RedirectMode::Overwrite)) });
     } else if let Some(pos) = input.find(">") {
         let cmd = input[..pos].trim().to_string();
         let file = input[pos + 1..].trim().to_string(); 
-        return (cmd, Redirect { stdout: Some((file, RedirectMode::Append)), stderr:None });
+        return (cmd, Redirect { stdout: Some((file, RedirectMode::Overwrite)), stderr:None });
     }
     
 
