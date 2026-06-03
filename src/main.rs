@@ -218,8 +218,8 @@ fn main() {
             if background {
                 parts.pop();
             }
-            let program = parts[0].clone();
-            let args = parts[1..].to_vec();
+            let program = &parts[0];
+            let args = &parts[1..];
 
             
             
