@@ -219,7 +219,7 @@ fn main() {
                 parts.pop();
             }
             let program = parts[0].clone();
-            let args = &parts[1..].to_vecI();
+            let args = parts[1..].to_vecI();
 
             
             
