@@ -64,7 +64,7 @@ enum RedirectMode {
 
 struct Redirect {
     stdout: Option<(String, RedirectMode)>,
-    stderr: Option<String>,
+    stderr: Option<(String, RedirectMode)>,
 }
 
 
@@ -82,6 +82,10 @@ fn parse_redirect(input: &str) -> (String, Redirect) {
         let cmd = input[..pos].trim().to_string();
         let file = input[pos + 2..].trim().to_string();
         return (cmd, Redirect { stdout: Some((file, RedirectMode::Append)),stderr:None });
+    } else if let Some(pos) = input.find("2>>") {
+        let cmd = input[..pos].trim().to_string();
+        let file = input[pos + 3..].trim().to_string(); 
+        return (cmd, Redirect { stdout:None, stderr: Some(file) });
     } else if let Some(pos) = input.find("2>") {
         let cmd = input[..pos].trim().to_string();
         let file = input[pos + 2..].trim().to_string(); 
@@ -119,9 +123,17 @@ fn main() {
             }
         });
 
-        let stderr_file = redirect.stderr.as_ref().map(|path|{
-            File::create(path).unwrap()
+        let stderr_file = redirect.stderr.as_ref().map(|(filename,mode)| {
+            match mode {
+                RedirectMode::Overwrite => File::create(filename).unwrap(),
+                RedirectMode::Append => File::options()
+                    .append(true)
+                    .create(true)
+                    .open(filename)
+                    .unwrap(),
+            }
         });
+
 
         if command == "exit" {
             break;
