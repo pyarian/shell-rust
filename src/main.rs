@@ -108,16 +108,16 @@ fn main() {
         let (command, redirect) = parse_redirect(&command);
         let command = command.as_str();
 
-        let stdout_file = redirect.stdout.as_ref().map(|filename,mode| {
+        let stdout_file = redirect.stdout.as_ref().map(|(filename,mode)| {
             match mode {
                 RedirectMode::Overwrite => File::create(filename).unwrap(),
                 RedirectMode::Append => File::options()
-                    .Append(true)
+                    .append(true)
                     .create(true)
                     .open(filename)
                     .unwrap(),
             }
-        })
+        });
 
         let stderr_file = redirect.stderr.as_ref().map(|path|{
             File::create(path).unwrap()
