@@ -229,7 +229,7 @@ fn main() {
             }
         } else if command == "jobs" {
             for i in &jobs {
-                println!("[{}]+  {:<24} {} &", i.job_number, i.status, i.command);
+                println!("[{}]+  {:<24}{} &", i.job_number, i.status, i.command);
             }
         } else if command.starts_with("pwd") {
             let current_folder = std::env::current_dir().unwrap();
@@ -290,7 +290,7 @@ fn main() {
                         status: "Running".to_string(),
                         job_number,
                         process_id: pid,
-                        command: program.to_string(),
+                        command: parts.join(" "),
                     });
                 } else {
                     let mut child = cmd.spawn().unwrap();
