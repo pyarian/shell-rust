@@ -68,50 +68,86 @@ struct Redirect {
 }
 
 struct Job {
-    job_number : u32,
-    process_id : u32,
-    command : String,
+    status: String,
+    job_number: u32,
+    process_id: u32,
+    command: String,
 }
-
 
 fn parse_redirect(input: &str) -> (String, Redirect) {
-
     if let Some(pos) = input.find("1>>") {
-    let cmd = input[..pos].trim().to_string();
-    let file = input[pos + 3..].trim().to_string();
-    return (cmd, Redirect { stdout: Some((file, RedirectMode::Append)), stderr: None });
-} else if let Some(pos) = input.find("2>>") {
-    let cmd = input[..pos].trim().to_string();
-    let file = input[pos + 3..].trim().to_string();
-    return (cmd, Redirect { stdout: None, stderr: Some((file, RedirectMode::Append)) });
-} else if let Some(pos) = input.find(">>") {
-    let cmd = input[..pos].trim().to_string();
-    let file = input[pos + 2..].trim().to_string();
-    return (cmd, Redirect { stdout: Some((file, RedirectMode::Append)), stderr: None });
-} else if let Some(pos) = input.find("2>") {
-    let cmd = input[..pos].trim().to_string();
-    let file = input[pos + 2..].trim().to_string();
-    return (cmd, Redirect { stdout: None, stderr: Some((file, RedirectMode::Overwrite)) });
-} else if let Some(pos) = input.find("1>") {
-    let cmd = input[..pos].trim().to_string();
-    let file = input[pos + 2..].trim().to_string();
-    return (cmd, Redirect { stdout: Some((file, RedirectMode::Overwrite)), stderr: None });
-} else if let Some(pos) = input.find(">") {
-    let cmd = input[..pos].trim().to_string();
-    let file = input[pos + 1..].trim().to_string();
-    return (cmd, Redirect { stdout: Some((file, RedirectMode::Overwrite)), stderr: None });
+        let cmd = input[..pos].trim().to_string();
+        let file = input[pos + 3..].trim().to_string();
+        return (
+            cmd,
+            Redirect {
+                stdout: Some((file, RedirectMode::Append)),
+                stderr: None,
+            },
+        );
+    } else if let Some(pos) = input.find("2>>") {
+        let cmd = input[..pos].trim().to_string();
+        let file = input[pos + 3..].trim().to_string();
+        return (
+            cmd,
+            Redirect {
+                stdout: None,
+                stderr: Some((file, RedirectMode::Append)),
+            },
+        );
+    } else if let Some(pos) = input.find(">>") {
+        let cmd = input[..pos].trim().to_string();
+        let file = input[pos + 2..].trim().to_string();
+        return (
+            cmd,
+            Redirect {
+                stdout: Some((file, RedirectMode::Append)),
+                stderr: None,
+            },
+        );
+    } else if let Some(pos) = input.find("2>") {
+        let cmd = input[..pos].trim().to_string();
+        let file = input[pos + 2..].trim().to_string();
+        return (
+            cmd,
+            Redirect {
+                stdout: None,
+                stderr: Some((file, RedirectMode::Overwrite)),
+            },
+        );
+    } else if let Some(pos) = input.find("1>") {
+        let cmd = input[..pos].trim().to_string();
+        let file = input[pos + 2..].trim().to_string();
+        return (
+            cmd,
+            Redirect {
+                stdout: Some((file, RedirectMode::Overwrite)),
+                stderr: None,
+            },
+        );
+    } else if let Some(pos) = input.find(">") {
+        let cmd = input[..pos].trim().to_string();
+        let file = input[pos + 1..].trim().to_string();
+        return (
+            cmd,
+            Redirect {
+                stdout: Some((file, RedirectMode::Overwrite)),
+                stderr: None,
+            },
+        );
+    }
+
+    (
+        input.trim().to_string(),
+        Redirect {
+            stdout: None,
+            stderr: None,
+        },
+    )
 }
-    
-
-    (input.trim().to_string(), Redirect { stdout: None , stderr:None})
-}
-
-
-
 
 fn main() {
-
-    let mut jobs : Vec<Job> = Vec::new();
+    let mut jobs: Vec<Job> = Vec::new();
 
     loop {
         print!("$ ");
@@ -124,28 +160,23 @@ fn main() {
         let (command, redirect) = parse_redirect(&command);
         let command = command.as_str();
 
-        let stdout_file = redirect.stdout.as_ref().map(|(filename,mode)| {
-            match mode {
-                RedirectMode::Overwrite => File::create(filename).unwrap(),
-                RedirectMode::Append => File::options()
-                    .append(true)
-                    .create(true)
-                    .open(filename)
-                    .unwrap(),
-            }
+        let stdout_file = redirect.stdout.as_ref().map(|(filename, mode)| match mode {
+            RedirectMode::Overwrite => File::create(filename).unwrap(),
+            RedirectMode::Append => File::options()
+                .append(true)
+                .create(true)
+                .open(filename)
+                .unwrap(),
         });
 
-        let stderr_file = redirect.stderr.as_ref().map(|(filename,mode)| {
-            match mode {
-                RedirectMode::Overwrite => File::create(filename).unwrap(),
-                RedirectMode::Append => File::options()
-                    .append(true)
-                    .create(true)
-                    .open(filename)
-                    .unwrap(),
-            }
+        let stderr_file = redirect.stderr.as_ref().map(|(filename, mode)| match mode {
+            RedirectMode::Overwrite => File::create(filename).unwrap(),
+            RedirectMode::Append => File::options()
+                .append(true)
+                .create(true)
+                .open(filename)
+                .unwrap(),
         });
-
 
         if command == "exit" {
             break;
@@ -156,7 +187,7 @@ fn main() {
             let output = parts.join(" ");
 
             match stdout_file {
-                Some(mut file) => writeln!(file, "{}", output).unwrap(), 
+                Some(mut file) => writeln!(file, "{}", output).unwrap(),
                 None => println!("{}", output),
             }
         } else if command.starts_with("type ") {
@@ -196,8 +227,10 @@ fn main() {
                     }
                 }
             }
-        } else if command=="jobs" {
-
+        } else if command == "jobs" {
+            for i in &jobs {
+                println!("[{}]+  {:<24} {} &", i.job_number, i.status, i.command);
+            }
         } else if command.starts_with("pwd") {
             let current_folder = std::env::current_dir().unwrap();
             println!("{}", current_folder.display());
@@ -214,15 +247,12 @@ fn main() {
             }
         } else {
             let mut parts = parse_args(&command);
-            let background = parts.last().map(|x| x=="&").unwrap_or(false);
+            let background = parts.last().map(|x| x == "&").unwrap_or(false);
             if background {
                 parts.pop();
             }
             let program = &parts[0];
             let args = &parts[1..];
-
-            
-            
 
             let path_var = std::env::var("PATH").unwrap_or_default();
             let mut found_path = None;
@@ -256,7 +286,12 @@ fn main() {
                     let job_number = jobs.len() as u32 + 1;
                     let pid = child.id();
                     println!("[{}] {}", job_number, pid);
-                    jobs.push(Job { job_number, process_id: pid, command: program.to_string() });
+                    jobs.push(Job {
+                        status: "Running".to_string(),
+                        job_number,
+                        process_id: pid,
+                        command: program.to_string(),
+                    });
                 } else {
                     let mut child = cmd.spawn().unwrap();
                     child.wait().unwrap();
