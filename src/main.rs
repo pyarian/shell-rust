@@ -228,8 +228,22 @@ fn main() {
                 }
             }
         } else if command == "jobs" {
-            for i in &jobs {
-                println!("[{}]+  {:<24}{} &", i.job_number, i.status, i.command);
+            for (index, job) in jobs.iter().enumerate() {
+                let mut marker;
+                if index == jobs.len() - 1 {
+                    marker = '+';
+                } else if index == jobs.len() - 2 {
+                    marker = '-';
+                } else {
+                    marker = ' ';
+                }
+                println!(
+                    "[{}]{}  {:<24}{} &",
+                    index + 1,
+                    marker,
+                    job.status,
+                    job.command
+                );
             }
         } else if command.starts_with("pwd") {
             let current_folder = std::env::current_dir().unwrap();
