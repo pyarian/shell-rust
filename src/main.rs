@@ -68,6 +68,7 @@ struct Redirect {
 }
 
 struct Job {
+    child: std::process::Child,
     status: String,
     job_number: u32,
     process_id: u32,
@@ -228,23 +229,41 @@ fn main() {
                 }
             }
         } else if command == "jobs" {
-            for (index, job) in jobs.iter().enumerate() {
+            let len = jobs.len();
+            for (index, job) in jobs.iter_mut().enumerate() {
                 let mut marker;
-                if index == jobs.len() - 1 {
+                if index == len - 1 {
                     marker = '+';
-                } else if index == jobs.len() - 2 {
+                } else if index == len - 2 {
                     marker = '-';
                 } else {
                     marker = ' ';
                 }
-                println!(
-                    "[{}]{}  {:<24}{} &",
-                    index + 1,
-                    marker,
-                    job.status,
-                    job.command
-                );
+
+                if let Ok(Some(_)) = job.child.try_wait() {
+                    job.status = "Done".to_string();
+                }
+
+                if job.status == "Done" {
+                    println!(
+                        "[{}]{}  {:<24}{} ",
+                        index + 1,
+                        marker,
+                        job.status,
+                        job.command
+                    );
+                } else if job.status == "Running" {
+                    println!(
+                        "[{}]{}  {:<24}{} &",
+                        index + 1,
+                        marker,
+                        job.status,
+                        job.command
+                    );
+                }
             }
+
+            jobs.retain(|job| job.status != "Done")
         } else if command.starts_with("pwd") {
             let current_folder = std::env::current_dir().unwrap();
             println!("{}", current_folder.display());
@@ -301,6 +320,7 @@ fn main() {
                     let pid = child.id();
                     println!("[{}] {}", job_number, pid);
                     jobs.push(Job {
+                        child: child,
                         status: "Running".to_string(),
                         job_number,
                         process_id: pid,
