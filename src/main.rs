@@ -1,8 +1,10 @@
 use std::{
     fs::File,
+    intrinsics::simd::SimdAlign::Vector,
     io::{self, Write},
     os::unix::fs::PermissionsExt,
     path::Path,
+    process::Stdio,
 };
 
 fn parse_args(input: &str) -> Vec<String> {
@@ -179,6 +181,10 @@ fn reap_and_print(jobs: &mut Vec<Job>) {
     jobs.retain(|job| job.status != "Done")
 }
 
+fn parse_pipeline(input: &str) -> Vec<&str> {
+    input.split('|').map(|s| s.trim()).collect()
+}
+
 fn main() {
     let mut jobs: Vec<Job> = Vec::new();
 
@@ -305,59 +311,86 @@ fn main() {
                 println!("{}: No such file or directory", new_dir)
             }
         } else {
-            let mut parts = parse_args(&command);
-            let background = parts.last().map(|x| x == "&").unwrap_or(false);
-            if background {
-                parts.pop();
-            }
-            let program = &parts[0];
-            let args = &parts[1..];
+            let parts = parse_pipeline(&command);
 
-            let path_var = std::env::var("PATH").unwrap_or_default();
-            let mut found_path = None;
+            if parts.len() == 2 {
+                let cmd1 = parse_args(parts[0]);
+                let cmd2 = parse_args(parts[1]);
 
-            for dir in path_var.split(':') {
-                let full_path = Path::new(dir).join(program);
+                let cmd1_program = &cmd1[0];
+                let cmd1_args = &cmd1[1..];
 
-                if full_path.exists() {
-                    let metadata = std::fs::metadata(&full_path).unwrap();
+                let cmd2_program = &cmd2[0];
+                let cmd2_args = &cmd2[1..];
 
-                    if metadata.permissions().mode() & 0o111 != 0 {
-                        found_path = Some(full_path);
-                        break;
+                let mut child1 = std::process::Command::new(cmd1_program)
+                    .args(cmd1_args)
+                    .stdout(Stdio::piped())
+                    .spawn()
+                    .unwrap();
+                let mut child2 = std::process::Command::new(cmd2_program)
+                    .args(cmd2_args)
+                    .stdin(child1.stdout.take().unwrap())
+                    .spawn()
+                    .unwrap();
+
+                child1.wait().unwrap();
+                child2.wait().unwrap();
+            } else {
+                let mut parts = parse_args(&command);
+                let background = parts.last().map(|x| x == "&").unwrap_or(false);
+                if background {
+                    parts.pop();
+                }
+                let program = &parts[0];
+                let args = &parts[1..];
+
+                let path_var = std::env::var("PATH").unwrap_or_default();
+                let mut found_path = None;
+
+                for dir in path_var.split(':') {
+                    let full_path = Path::new(dir).join(program);
+
+                    if full_path.exists() {
+                        let metadata = std::fs::metadata(&full_path).unwrap();
+
+                        if metadata.permissions().mode() & 0o111 != 0 {
+                            found_path = Some(full_path);
+                            break;
+                        }
                     }
                 }
-            }
 
-            if let Some(_path) = found_path {
-                let mut cmd = std::process::Command::new(program); // ✅
-                cmd.args(args);
+                if let Some(_path) = found_path {
+                    let mut cmd = std::process::Command::new(program); // ✅
+                    cmd.args(args);
 
-                if let Some(file) = stdout_file {
-                    cmd.stdout(file);
-                }
-                if let Some(file) = stderr_file {
-                    cmd.stderr(file);
-                }
+                    if let Some(file) = stdout_file {
+                        cmd.stdout(file);
+                    }
+                    if let Some(file) = stderr_file {
+                        cmd.stderr(file);
+                    }
 
-                if background {
-                    let child = cmd.spawn().unwrap();
-                    let job_number = jobs.len() as u32 + 1;
-                    let pid = child.id();
-                    println!("[{}] {}", job_number, pid);
-                    jobs.push(Job {
-                        child: child,
-                        status: "Running".to_string(),
-                        job_number,
-                        process_id: pid,
-                        command: parts.join(" "),
-                    });
+                    if background {
+                        let child = cmd.spawn().unwrap();
+                        let job_number = jobs.len() as u32 + 1;
+                        let pid = child.id();
+                        println!("[{}] {}", job_number, pid);
+                        jobs.push(Job {
+                            child: child,
+                            status: "Running".to_string(),
+                            job_number,
+                            process_id: pid,
+                            command: parts.join(" "),
+                        });
+                    } else {
+                        let mut child = cmd.spawn().unwrap();
+                        child.wait().unwrap();
+                    }
                 } else {
-                    let mut child = cmd.spawn().unwrap();
-                    child.wait().unwrap();
+                    println!("{}: not found", program);
                 }
-            } else {
-                println!("{}: not found", program);
             }
         }
     }
