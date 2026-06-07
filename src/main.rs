@@ -2,10 +2,11 @@ use std::{
     fs::File,
     io::{self, Write},
     os::unix::fs::PermissionsExt,
-    os_pipe::pipe,
     path::Path,
     process::Stdio,
 };
+
+use os_pipe::pipe;
 
 fn parse_args(input: &str) -> Vec<String> {
     let mut args: Vec<String> = Vec::new();
