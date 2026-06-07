@@ -161,7 +161,7 @@ fn reap_and_print(jobs: &mut Vec<Job>) {
     check_jobs(jobs);
     let len = jobs.len();
     for (index, job) in jobs.iter_mut().enumerate() {
-        let mut marker;
+        let marker;
         if index == len - 1 {
             marker = '+';
         } else if index == len - 2 {
@@ -273,7 +273,7 @@ fn main() {
             check_jobs(&mut jobs);
             let len = jobs.len();
             for (index, job) in jobs.iter_mut().enumerate() {
-                let mut marker;
+                let marker;
                 if index == len - 1 {
                     marker = '+';
                 } else if index == len - 2 {
