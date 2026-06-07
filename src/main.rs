@@ -152,7 +152,11 @@ fn main() {
 
     loop {
         if !jobs.is_empty() {
-            for job in jobs.iter().filter(|&&job| job.status == "Done") {
+            if let Ok(Some(_)) = job.child.try_wait() {
+                job.status = "Done".to_string();
+            }
+
+            for job in jobs.iter_mut().filter(|job| job.status == "Done") {
                 println!(
                     "[{}]{}  {:<24}{} ",
                     job.job_number, marker, job.status, job.command
