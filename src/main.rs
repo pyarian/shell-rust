@@ -147,25 +147,45 @@ fn parse_redirect(input: &str) -> (String, Redirect) {
     )
 }
 
+fn check_jobs(jobs: &mut Vec<Job>) {
+    for job in jobs.iter_mut() {
+        if let Ok(Some(_)) = job.child.try_wait() {
+            job.status = "Done".to_string();
+        }
+    }
+}
+
+fn reap_and_print(jobs: &mut Vec<Job>) {
+    check_jobs(jobs);
+    let len = jobs.len();
+    for (index, job) in jobs.iter_mut().enumerate() {
+        let mut marker;
+        if index == len - 1 {
+            marker = '+';
+        } else if index == len - 2 {
+            marker = '-';
+        } else {
+            marker = ' ';
+        }
+
+        if job.status == "Done" {
+            println!(
+                "[{}]{}  {:<24}{} ",
+                job.job_number, marker, job.status, job.command
+            );
+        }
+    }
+
+    jobs.retain(|job| job.status != "Done")
+}
+
 fn main() {
     let mut jobs: Vec<Job> = Vec::new();
 
     loop {
         if !jobs.is_empty() {
-            if let Ok(Some(_)) = job.child.try_wait() {
-                job.status = "Done".to_string();
-            }
-
-            for job in jobs.iter_mut().filter(|job| job.status == "Done") {
-                println!(
-                    "[{}]{}  {:<24}{} ",
-                    job.job_number, marker, job.status, job.command
-                );
-            }
-
-            jobs.retain(|job| job.status != "Done");
+            reap_and_print(&mut jobs);
         }
-
         print!("$ ");
         io::stdout().flush().unwrap();
 
@@ -244,6 +264,7 @@ fn main() {
                 }
             }
         } else if command == "jobs" {
+            check_jobs(&mut jobs);
             let len = jobs.len();
             for (index, job) in jobs.iter_mut().enumerate() {
                 let mut marker;
@@ -253,10 +274,6 @@ fn main() {
                     marker = '-';
                 } else {
                     marker = ' ';
-                }
-
-                if let Ok(Some(_)) = job.child.try_wait() {
-                    job.status = "Done".to_string();
                 }
 
                 if job.status == "Done" {
