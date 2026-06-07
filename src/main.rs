@@ -2,6 +2,7 @@ use std::{
     fs::File,
     io::{self, Write},
     os::unix::fs::PermissionsExt,
+    os_pipe::pipe,
     path::Path,
     process::Stdio,
 };
@@ -184,6 +185,10 @@ fn parse_pipeline(input: &str) -> Vec<&str> {
     input.split('|').map(|s| s.trim()).collect()
 }
 
+fn is_builtin(cmd: &str) -> bool {
+    matches!(cmd, "echo" | "type" | "pwd" | "cd" | "exit" | "jobs")
+}
+
 fn main() {
     let mut jobs: Vec<Job> = Vec::new();
 
@@ -322,19 +327,62 @@ fn main() {
                 let cmd2_program = &cmd2[0];
                 let cmd2_args = &cmd2[1..];
 
-                let mut child1 = std::process::Command::new(cmd1_program)
-                    .args(cmd1_args)
-                    .stdout(Stdio::piped())
-                    .spawn()
-                    .unwrap();
-                let mut child2 = std::process::Command::new(cmd2_program)
-                    .args(cmd2_args)
-                    .stdin(child1.stdout.take().unwrap())
-                    .spawn()
-                    .unwrap();
+                // ✅ now you can use them
+                let cmd1_is_builtin = is_builtin(cmd1_program);
+                let cmd2_is_builtin = is_builtin(cmd2_program);
 
-                child1.wait().unwrap();
-                child2.wait().unwrap();
+                if cmd1_is_builtin && !cmd2_is_builtin {
+                    // builtin | external
+                    let (mut reader, mut writer) = pipe().unwrap();
+
+                    let mut child2 = std::process::Command::new(cmd2_program)
+                        .args(cmd2_args)
+                        .stdin(reader)
+                        .spawn()
+                        .unwrap();
+
+                    if cmd1_program == "echo" {
+                        let output = cmd1_args.join(" ");
+                        writeln!(writer, "{}", output).unwrap();
+                    }
+
+                    drop(writer);
+                    child2.wait().unwrap();
+                } else if !cmd1_is_builtin && cmd2_is_builtin {
+                    // external | builtin
+                    // ls | type exit — just run cmd2 normally, stdin doesn't matter
+                    let mut child1 = std::process::Command::new(cmd1_program)
+                        .args(cmd1_args)
+                        .stdout(Stdio::null()) // discard output
+                        .spawn()
+                        .unwrap();
+
+                    // run the builtin normally
+                    if cmd2_program == "type" {
+                        if let Some(arg) = cmd2_args.first() {
+                            if is_builtin(arg) {
+                                println!("{} is a shell builtin", arg);
+                            }
+                        }
+                    }
+
+                    child1.wait().unwrap();
+                } else {
+                    // external | external — your existing code
+                    let mut child1 = std::process::Command::new(cmd1_program)
+                        .args(cmd1_args)
+                        .stdout(Stdio::piped())
+                        .spawn()
+                        .unwrap();
+                    let mut child2 = std::process::Command::new(cmd2_program)
+                        .args(cmd2_args)
+                        .stdin(child1.stdout.take().unwrap())
+                        .spawn()
+                        .unwrap();
+
+                    child1.wait().unwrap();
+                    child2.wait().unwrap();
+                }
             } else {
                 let mut parts = parse_args(&command);
                 let background = parts.last().map(|x| x == "&").unwrap_or(false);
