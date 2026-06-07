@@ -1,6 +1,5 @@
 use std::{
     fs::File,
-    intrinsics::simd::SimdAlign::Vector,
     io::{self, Write},
     os::unix::fs::PermissionsExt,
     path::Path,
