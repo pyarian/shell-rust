@@ -151,6 +151,17 @@ fn main() {
     let mut jobs: Vec<Job> = Vec::new();
 
     loop {
+        if !jobs.is_empty() {
+            for job in jobs.iter().filter(|&&job| job.status == "Done") {
+                println!(
+                    "[{}]{}  {:<24}{} ",
+                    job.job_number, marker, job.status, job.command
+                );
+            }
+
+            jobs.retain(|job| job.status != "Done");
+        }
+
         print!("$ ");
         io::stdout().flush().unwrap();
 
