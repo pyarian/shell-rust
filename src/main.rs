@@ -247,18 +247,12 @@ fn main() {
                 if job.status == "Done" {
                     println!(
                         "[{}]{}  {:<24}{} ",
-                        index + 1,
-                        marker,
-                        job.status,
-                        job.command
+                        job.job_number, marker, job.status, job.command
                     );
                 } else if job.status == "Running" {
                     println!(
                         "[{}]{}  {:<24}{} &",
-                        index + 1,
-                        marker,
-                        job.status,
-                        job.command
+                        job.job_number, marker, job.status, job.command
                     );
                 }
             }
