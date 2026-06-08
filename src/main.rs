@@ -227,7 +227,13 @@ fn main() {
 
         let parts = parse_pipeline(&command);
 
-        if parts.len() == 2 {
+        
+
+            if command == "exit" {
+                break;
+            }
+
+            if parts.len() == 2 {
             let cmd1 = parse_args(parts[0]);
             let cmd2 = parse_args(parts[1]);
 
@@ -293,12 +299,7 @@ fn main() {
                 child1.wait().unwrap();
                 child2.wait().unwrap();
             }
-
-            if command == "exit" {
-                break;
-            }
-
-            if command.starts_with("echo ") {
+        } else if command.starts_with("echo ") {
                 let parts = parse_args(&command[5..]);
                 let output = parts.join(" ");
 
