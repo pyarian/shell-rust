@@ -225,164 +225,164 @@ fn main() {
                 .unwrap(),
         });
 
-        if command == "exit" {
-            break;
-        }
+        let parts = parse_pipeline(&command);
 
-        if command.starts_with("echo ") {
-            let parts = parse_args(&command[5..]);
-            let output = parts.join(" ");
+        if parts.len() == 2 {
+            let cmd1 = parse_args(parts[0]);
+            let cmd2 = parse_args(parts[1]);
 
-            match stdout_file {
-                Some(mut file) => writeln!(file, "{}", output).unwrap(),
-                None => println!("{}", output),
-            }
-        } else if command.starts_with("type ") {
-            let cmd = command.split_whitespace().nth(1).unwrap();
+            let cmd1_program = &cmd1[0];
+            let cmd1_args = &cmd1[1..];
 
-            match cmd {
-                "echo" | "exit" | "type" | "pwd" | "cd" | "jobs" => {
-                    println!("{} is a shell builtin", cmd);
+            let cmd2_program = &cmd2[0];
+            let cmd2_args = &cmd2[1..];
+
+            // ✅ now you can use them
+            let cmd1_is_builtin = is_builtin(cmd1_program);
+            let cmd2_is_builtin = is_builtin(cmd2_program);
+
+            if cmd1_is_builtin && !cmd2_is_builtin {
+                // builtin | external
+                let (mut reader, mut writer) = pipe().unwrap();
+
+                let mut child2 = std::process::Command::new(cmd2_program)
+                    .args(cmd2_args)
+                    .stdin(reader)
+                    .spawn()
+                    .unwrap();
+
+                if cmd1_program == "echo" {
+                    let output = cmd1_args.join(" ");
+                    writeln!(writer, "{}", output).unwrap();
                 }
-                _ => {
-                    let path_var = match std::env::var("PATH") {
-                        Ok(p) => p,
-                        Err(_) => {
-                            println!("PATH not found");
-                            continue;
-                        }
-                    };
 
-                    let mut found = false;
+                drop(writer);
+                child2.wait().unwrap();
+            } else if !cmd1_is_builtin && cmd2_is_builtin {
+                // external | builtin
+                // ls | type exit — just run cmd2 normally, stdin doesn't matter
+                let mut child1 = std::process::Command::new(cmd1_program)
+                    .args(cmd1_args)
+                    .stdout(Stdio::null()) // discard output
+                    .spawn()
+                    .unwrap();
 
-                    for dir in path_var.split(':') {
-                        let full_path = Path::new(dir).join(cmd);
-
-                        if full_path.exists() {
-                            let metadata = std::fs::metadata(&full_path).unwrap();
-
-                            if metadata.permissions().mode() & 0o111 != 0 {
-                                println!("{} is {}", cmd, full_path.display());
-                                found = true;
-                                break;
-                            }
+                // run the builtin normally
+                if cmd2_program == "type" {
+                    if let Some(arg) = cmd2_args.first() {
+                        if is_builtin(arg) {
+                            println!("{} is a shell builtin", arg);
                         }
                     }
-
-                    if !found {
-                        println!("{}: not found", cmd);
-                    }
-                }
-            }
-        } else if command == "jobs" {
-            check_jobs(&mut jobs);
-            let len = jobs.len();
-            for (index, job) in jobs.iter_mut().enumerate() {
-                let marker;
-                if index == len - 1 {
-                    marker = '+';
-                } else if index == len - 2 {
-                    marker = '-';
-                } else {
-                    marker = ' ';
                 }
 
-                if job.status == "Done" {
-                    println!(
-                        "[{}]{}  {:<24}{} ",
-                        job.job_number, marker, job.status, job.command
-                    );
-                } else if job.status == "Running" {
-                    println!(
-                        "[{}]{}  {:<24}{} &",
-                        job.job_number, marker, job.status, job.command
-                    );
-                }
-            }
-
-            jobs.retain(|job| job.status != "Done")
-        } else if command.starts_with("pwd") {
-            let current_folder = std::env::current_dir().unwrap();
-            println!("{}", current_folder.display());
-        } else if command.starts_with("cd") {
-            let new_dir = command.split_whitespace().nth(1).unwrap();
-
-            if new_dir == "~" {
-                let home_dir = std::env::home_dir().unwrap();
-                std::env::set_current_dir(home_dir).unwrap();
-            } else if Path::new(new_dir).exists() {
-                std::env::set_current_dir(new_dir).unwrap();
+                child1.wait().unwrap();
             } else {
-                println!("{}: No such file or directory", new_dir)
+                // external | external — your existing code
+                let mut child1 = std::process::Command::new(cmd1_program)
+                    .args(cmd1_args)
+                    .stdout(Stdio::piped())
+                    .spawn()
+                    .unwrap();
+                let mut child2 = std::process::Command::new(cmd2_program)
+                    .args(cmd2_args)
+                    .stdin(child1.stdout.take().unwrap())
+                    .spawn()
+                    .unwrap();
+
+                child1.wait().unwrap();
+                child2.wait().unwrap();
             }
-        } else {
-            let parts = parse_pipeline(&command);
 
-            if parts.len() == 2 {
-                let cmd1 = parse_args(parts[0]);
-                let cmd2 = parse_args(parts[1]);
+            if command == "exit" {
+                break;
+            }
 
-                let cmd1_program = &cmd1[0];
-                let cmd1_args = &cmd1[1..];
+            if command.starts_with("echo ") {
+                let parts = parse_args(&command[5..]);
+                let output = parts.join(" ");
 
-                let cmd2_program = &cmd2[0];
-                let cmd2_args = &cmd2[1..];
+                match stdout_file {
+                    Some(mut file) => writeln!(file, "{}", output).unwrap(),
+                    None => println!("{}", output),
+                }
+            } else if command.starts_with("type ") {
+                let cmd = command.split_whitespace().nth(1).unwrap();
 
-                // ✅ now you can use them
-                let cmd1_is_builtin = is_builtin(cmd1_program);
-                let cmd2_is_builtin = is_builtin(cmd2_program);
-
-                if cmd1_is_builtin && !cmd2_is_builtin {
-                    // builtin | external
-                    let (mut reader, mut writer) = pipe().unwrap();
-
-                    let mut child2 = std::process::Command::new(cmd2_program)
-                        .args(cmd2_args)
-                        .stdin(reader)
-                        .spawn()
-                        .unwrap();
-
-                    if cmd1_program == "echo" {
-                        let output = cmd1_args.join(" ");
-                        writeln!(writer, "{}", output).unwrap();
+                match cmd {
+                    "echo" | "exit" | "type" | "pwd" | "cd" | "jobs" => {
+                        println!("{} is a shell builtin", cmd);
                     }
+                    _ => {
+                        let path_var = match std::env::var("PATH") {
+                            Ok(p) => p,
+                            Err(_) => {
+                                println!("PATH not found");
+                                continue;
+                            }
+                        };
 
-                    drop(writer);
-                    child2.wait().unwrap();
-                } else if !cmd1_is_builtin && cmd2_is_builtin {
-                    // external | builtin
-                    // ls | type exit — just run cmd2 normally, stdin doesn't matter
-                    let mut child1 = std::process::Command::new(cmd1_program)
-                        .args(cmd1_args)
-                        .stdout(Stdio::null()) // discard output
-                        .spawn()
-                        .unwrap();
+                        let mut found = false;
 
-                    // run the builtin normally
-                    if cmd2_program == "type" {
-                        if let Some(arg) = cmd2_args.first() {
-                            if is_builtin(arg) {
-                                println!("{} is a shell builtin", arg);
+                        for dir in path_var.split(':') {
+                            let full_path = Path::new(dir).join(cmd);
+
+                            if full_path.exists() {
+                                let metadata = std::fs::metadata(&full_path).unwrap();
+
+                                if metadata.permissions().mode() & 0o111 != 0 {
+                                    println!("{} is {}", cmd, full_path.display());
+                                    found = true;
+                                    break;
+                                }
                             }
                         }
+
+                        if !found {
+                            println!("{}: not found", cmd);
+                        }
+                    }
+                }
+            } else if command == "jobs" {
+                check_jobs(&mut jobs);
+                let len = jobs.len();
+                for (index, job) in jobs.iter_mut().enumerate() {
+                    let marker;
+                    if index == len - 1 {
+                        marker = '+';
+                    } else if index == len - 2 {
+                        marker = '-';
+                    } else {
+                        marker = ' ';
                     }
 
-                    child1.wait().unwrap();
-                } else {
-                    // external | external — your existing code
-                    let mut child1 = std::process::Command::new(cmd1_program)
-                        .args(cmd1_args)
-                        .stdout(Stdio::piped())
-                        .spawn()
-                        .unwrap();
-                    let mut child2 = std::process::Command::new(cmd2_program)
-                        .args(cmd2_args)
-                        .stdin(child1.stdout.take().unwrap())
-                        .spawn()
-                        .unwrap();
+                    if job.status == "Done" {
+                        println!(
+                            "[{}]{}  {:<24}{} ",
+                            job.job_number, marker, job.status, job.command
+                        );
+                    } else if job.status == "Running" {
+                        println!(
+                            "[{}]{}  {:<24}{} &",
+                            job.job_number, marker, job.status, job.command
+                        );
+                    }
+                }
 
-                    child1.wait().unwrap();
-                    child2.wait().unwrap();
+                jobs.retain(|job| job.status != "Done")
+            } else if command.starts_with("pwd") {
+                let current_folder = std::env::current_dir().unwrap();
+                println!("{}", current_folder.display());
+            } else if command.starts_with("cd") {
+                let new_dir = command.split_whitespace().nth(1).unwrap();
+
+                if new_dir == "~" {
+                    let home_dir = std::env::home_dir().unwrap();
+                    std::env::set_current_dir(home_dir).unwrap();
+                } else if Path::new(new_dir).exists() {
+                    std::env::set_current_dir(new_dir).unwrap();
+                } else {
+                    println!("{}: No such file or directory", new_dir)
                 }
             } else {
                 let mut parts = parse_args(&command);
