@@ -162,24 +162,22 @@ fn reap_and_print(jobs: &mut Vec<Job>) {
     check_jobs(jobs);
     let len = jobs.len();
     for (index, job) in jobs.iter_mut().enumerate() {
-        let marker;
-        if index == len - 1 {
-            marker = '+';
+        let marker = if index == len - 1 {
+            '+'
         } else if index == len - 2 {
-            marker = '-';
+            '-'
         } else {
-            marker = ' ';
-        }
+            ' '
+        };
 
         if job.status == "Done" {
             println!(
-                "[{}]{}  {:<24}{} ",
+                "[{}]{}  {:<24}{}",
                 job.job_number, marker, job.status, job.command
             );
         }
     }
-
-    jobs.retain(|job| job.status != "Done")
+    jobs.retain(|job| job.status != "Done");
 }
 
 fn parse_pipeline(input: &str) -> Vec<&str> {
@@ -197,6 +195,7 @@ fn main() {
         if !jobs.is_empty() {
             reap_and_print(&mut jobs);
         }
+
         print!("$ ");
         io::stdout().flush().unwrap();
 
@@ -225,31 +224,22 @@ fn main() {
                 .unwrap(),
         });
 
-        let parts = parse_pipeline(&command);
+        let pipeline_parts = parse_pipeline(command);
 
-        
-
-            if command == "exit" {
-                break;
-            }
-
-            if parts.len() == 2 {
-            let cmd1 = parse_args(parts[0]);
-            let cmd2 = parse_args(parts[1]);
+        if pipeline_parts.len() == 2 {
+            let cmd1 = parse_args(pipeline_parts[0]);
+            let cmd2 = parse_args(pipeline_parts[1]);
 
             let cmd1_program = &cmd1[0];
             let cmd1_args = &cmd1[1..];
-
             let cmd2_program = &cmd2[0];
             let cmd2_args = &cmd2[1..];
 
-            // ✅ now you can use them
             let cmd1_is_builtin = is_builtin(cmd1_program);
             let cmd2_is_builtin = is_builtin(cmd2_program);
 
             if cmd1_is_builtin && !cmd2_is_builtin {
-                // builtin | external
-                let (mut reader, mut writer) = pipe().unwrap();
+                let (reader, mut writer) = pipe().unwrap();
 
                 let mut child2 = std::process::Command::new(cmd2_program)
                     .args(cmd2_args)
@@ -265,31 +255,30 @@ fn main() {
                 drop(writer);
                 child2.wait().unwrap();
             } else if !cmd1_is_builtin && cmd2_is_builtin {
-                // external | builtin
-                // ls | type exit — just run cmd2 normally, stdin doesn't matter
                 let mut child1 = std::process::Command::new(cmd1_program)
                     .args(cmd1_args)
-                    .stdout(Stdio::null()) // discard output
+                    .stdout(Stdio::null())
                     .spawn()
                     .unwrap();
 
-                // run the builtin normally
                 if cmd2_program == "type" {
                     if let Some(arg) = cmd2_args.first() {
                         if is_builtin(arg) {
                             println!("{} is a shell builtin", arg);
+                        } else {
+                            println!("{}: not found", arg);
                         }
                     }
                 }
 
                 child1.wait().unwrap();
             } else {
-                // external | external — your existing code
                 let mut child1 = std::process::Command::new(cmd1_program)
                     .args(cmd1_args)
                     .stdout(Stdio::piped())
                     .spawn()
                     .unwrap();
+
                 let mut child2 = std::process::Command::new(cmd2_program)
                     .args(cmd2_args)
                     .stdin(child1.stdout.take().unwrap())
@@ -299,147 +288,135 @@ fn main() {
                 child1.wait().unwrap();
                 child2.wait().unwrap();
             }
+        } else if command == "exit" {
+            break;
         } else if command.starts_with("echo ") {
-                let parts = parse_args(&command[5..]);
-                let output = parts.join(" ");
-
-                match stdout_file {
-                    Some(mut file) => writeln!(file, "{}", output).unwrap(),
-                    None => println!("{}", output),
+            let parts = parse_args(&command[5..]);
+            let output = parts.join(" ");
+            match stdout_file {
+                Some(mut file) => writeln!(file, "{}", output).unwrap(),
+                None => println!("{}", output),
+            }
+        } else if command.starts_with("type ") {
+            let cmd = command.split_whitespace().nth(1).unwrap();
+            match cmd {
+                "echo" | "exit" | "type" | "pwd" | "cd" | "jobs" => {
+                    println!("{} is a shell builtin", cmd);
                 }
-            } else if command.starts_with("type ") {
-                let cmd = command.split_whitespace().nth(1).unwrap();
-
-                match cmd {
-                    "echo" | "exit" | "type" | "pwd" | "cd" | "jobs" => {
-                        println!("{} is a shell builtin", cmd);
-                    }
-                    _ => {
-                        let path_var = match std::env::var("PATH") {
-                            Ok(p) => p,
-                            Err(_) => {
-                                println!("PATH not found");
-                                continue;
-                            }
-                        };
-
-                        let mut found = false;
-
-                        for dir in path_var.split(':') {
-                            let full_path = Path::new(dir).join(cmd);
-
-                            if full_path.exists() {
-                                let metadata = std::fs::metadata(&full_path).unwrap();
-
-                                if metadata.permissions().mode() & 0o111 != 0 {
-                                    println!("{} is {}", cmd, full_path.display());
-                                    found = true;
-                                    break;
-                                }
+                _ => {
+                    let path_var = match std::env::var("PATH") {
+                        Ok(p) => p,
+                        Err(_) => {
+                            println!("PATH not found");
+                            continue;
+                        }
+                    };
+                    let mut found = false;
+                    for dir in path_var.split(':') {
+                        let full_path = Path::new(dir).join(cmd);
+                        if full_path.exists() {
+                            let metadata = std::fs::metadata(&full_path).unwrap();
+                            if metadata.permissions().mode() & 0o111 != 0 {
+                                println!("{} is {}", cmd, full_path.display());
+                                found = true;
+                                break;
                             }
                         }
-
-                        if !found {
-                            println!("{}: not found", cmd);
-                        }
+                    }
+                    if !found {
+                        println!("{}: not found", cmd);
                     }
                 }
-            } else if command == "jobs" {
-                check_jobs(&mut jobs);
-                let len = jobs.len();
-                for (index, job) in jobs.iter_mut().enumerate() {
-                    let marker;
-                    if index == len - 1 {
-                        marker = '+';
-                    } else if index == len - 2 {
-                        marker = '-';
-                    } else {
-                        marker = ' ';
-                    }
-
-                    if job.status == "Done" {
-                        println!(
-                            "[{}]{}  {:<24}{} ",
-                            job.job_number, marker, job.status, job.command
-                        );
-                    } else if job.status == "Running" {
-                        println!(
-                            "[{}]{}  {:<24}{} &",
-                            job.job_number, marker, job.status, job.command
-                        );
-                    }
-                }
-
-                jobs.retain(|job| job.status != "Done")
-            } else if command.starts_with("pwd") {
-                let current_folder = std::env::current_dir().unwrap();
-                println!("{}", current_folder.display());
-            } else if command.starts_with("cd") {
-                let new_dir = command.split_whitespace().nth(1).unwrap();
-
-                if new_dir == "~" {
-                    let home_dir = std::env::home_dir().unwrap();
-                    std::env::set_current_dir(home_dir).unwrap();
-                } else if Path::new(new_dir).exists() {
-                    std::env::set_current_dir(new_dir).unwrap();
+            }
+        } else if command == "jobs" {
+            check_jobs(&mut jobs);
+            let len = jobs.len();
+            for (index, job) in jobs.iter_mut().enumerate() {
+                let marker = if index == len - 1 {
+                    '+'
+                } else if index == len - 2 {
+                    '-'
                 } else {
-                    println!("{}: No such file or directory", new_dir)
+                    ' '
+                };
+                if job.status == "Done" {
+                    println!(
+                        "[{}]{}  {:<24}{}",
+                        job.job_number, marker, job.status, job.command
+                    );
+                } else if job.status == "Running" {
+                    println!(
+                        "[{}]{}  {:<24}{} &",
+                        job.job_number, marker, job.status, job.command
+                    );
+                }
+            }
+            jobs.retain(|job| job.status != "Done");
+        } else if command.starts_with("pwd") {
+            let current_folder = std::env::current_dir().unwrap();
+            println!("{}", current_folder.display());
+        } else if command.starts_with("cd") {
+            let new_dir = command.split_whitespace().nth(1).unwrap();
+            if new_dir == "~" {
+                let home_dir = std::env::home_dir().unwrap();
+                std::env::set_current_dir(home_dir).unwrap();
+            } else if Path::new(new_dir).exists() {
+                std::env::set_current_dir(new_dir).unwrap();
+            } else {
+                println!("{}: No such file or directory", new_dir);
+            }
+        } else {
+            let mut parts = parse_args(command);
+            let background = parts.last().map(|x| x == "&").unwrap_or(false);
+            if background {
+                parts.pop();
+            }
+            let program = &parts[0];
+            let args = &parts[1..];
+
+            let path_var = std::env::var("PATH").unwrap_or_default();
+            let mut found_path = None;
+
+            for dir in path_var.split(':') {
+                let full_path = Path::new(dir).join(program);
+                if full_path.exists() {
+                    let metadata = std::fs::metadata(&full_path).unwrap();
+                    if metadata.permissions().mode() & 0o111 != 0 {
+                        found_path = Some(full_path);
+                        break;
+                    }
+                }
+            }
+
+            if let Some(_path) = found_path {
+                let mut cmd = std::process::Command::new(program);
+                cmd.args(args);
+
+                if let Some(file) = stdout_file {
+                    cmd.stdout(file);
+                }
+                if let Some(file) = stderr_file {
+                    cmd.stderr(file);
+                }
+
+                if background {
+                    let child = cmd.spawn().unwrap();
+                    let job_number = jobs.len() as u32 + 1;
+                    let pid = child.id();
+                    println!("[{}] {}", job_number, pid);
+                    jobs.push(Job {
+                        child,
+                        status: "Running".to_string(),
+                        job_number,
+                        process_id: pid,
+                        command: parts.join(" "),
+                    });
+                } else {
+                    let mut child = cmd.spawn().unwrap();
+                    child.wait().unwrap();
                 }
             } else {
-                let mut parts = parse_args(&command);
-                let background = parts.last().map(|x| x == "&").unwrap_or(false);
-                if background {
-                    parts.pop();
-                }
-                let program = &parts[0];
-                let args = &parts[1..];
-
-                let path_var = std::env::var("PATH").unwrap_or_default();
-                let mut found_path = None;
-
-                for dir in path_var.split(':') {
-                    let full_path = Path::new(dir).join(program);
-
-                    if full_path.exists() {
-                        let metadata = std::fs::metadata(&full_path).unwrap();
-
-                        if metadata.permissions().mode() & 0o111 != 0 {
-                            found_path = Some(full_path);
-                            break;
-                        }
-                    }
-                }
-
-                if let Some(_path) = found_path {
-                    let mut cmd = std::process::Command::new(program); // ✅
-                    cmd.args(args);
-
-                    if let Some(file) = stdout_file {
-                        cmd.stdout(file);
-                    }
-                    if let Some(file) = stderr_file {
-                        cmd.stderr(file);
-                    }
-
-                    if background {
-                        let child = cmd.spawn().unwrap();
-                        let job_number = jobs.len() as u32 + 1;
-                        let pid = child.id();
-                        println!("[{}] {}", job_number, pid);
-                        jobs.push(Job {
-                            child: child,
-                            status: "Running".to_string(),
-                            job_number,
-                            process_id: pid,
-                            command: parts.join(" "),
-                        });
-                    } else {
-                        let mut child = cmd.spawn().unwrap();
-                        child.wait().unwrap();
-                    }
-                } else {
-                    println!("{}: not found", program);
-                }
+                println!("{}: not found", program);
             }
         }
     }
