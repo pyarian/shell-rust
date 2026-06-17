@@ -330,22 +330,24 @@ fn main() {
             }
         } else if command.starts_with("declare ") {
             let parts = parse_args(&command[8..]);
-            println!("DEBUG parts: {:?}", parts);
+            //println!("DEBUG parts: {:?}", parts);
 
             if parts.get(0).map(|s| s.as_str()) == Some("-p") {
-                if variables.contains_key(parts.get(1).unwrap()) {
+
+                if let Spme(name) = parts.get(1);
+                if variables.contains_key(name) {
                     println!(
                         "declare -- {}=\"{}\"",
-                        parts.get(1).unwrap(),
-                        variables[parts.get(1).unwrap()],
+                        name,
+                        variables[name]
                     );
                 } else {
-                    println!("declare: {}: not found", parts[1])
+                    println!("declare: {}: not found", name)
                 }
             } else {
-                //let p: Vec<&str> = parts[1].split('=').map(|s| s.trim()).collect();
+                let p: Vec<&str> = parts[0].split('=').map(|s| s.trim()).collect();
 
-                //variables.insert(p[0].to_string(), p[1].to_string());
+                variables.insert(p[0].to_string(), p[1].to_string());
             }
         } else if command == "jobs" {
             check_jobs(&mut jobs);
