@@ -1,5 +1,6 @@
 use os_pipe::pipe;
 use std::{
+    clone,
     collections::HashMap,
     fs::File,
     io::{self, Write},
@@ -247,6 +248,18 @@ fn run_pipeline(commands: &[&str]) {
     }
 }
 
+fn expand_variables(args: Vec<String>, variables: &HashMap<String, String>) -> Vec<String> {
+    args.into_iter()
+        .map(|arg| {
+            if let Some(name) = arg.strip_prefix('$') {
+                variables.get(name).cloned().unwrap_or_default()
+            } else {
+                arg
+            }
+        })
+        .collect()
+}
+
 fn main() {
     let mut jobs: Vec<Job> = Vec::new();
     let mut variables: HashMap<String, String> = HashMap::new();
@@ -397,6 +410,7 @@ fn main() {
             }
         } else {
             let mut parts = parse_args(command);
+            parts = expand_variables(parts, &variables);
             let background = parts.last().map(|x| x == "&").unwrap_or(false);
             if background {
                 parts.pop();
