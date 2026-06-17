@@ -340,12 +340,22 @@ fn main() {
                 }
             } else {
                 let p: Vec<&str> = parts[0].split('=').map(|s| s.trim()).collect();
-                let x = p[0].to_string();
-                if let Some(x) = x.chars().next() {
-                    if x.is_ascii_digit() {
-                        println!("declare: `{}': not a valid identifier", parts[0]);
+                let name = p[0].to_string();
+                let mut chars = name.chars();
+
+                let is_valid = match chars.next() {
+                    Some(first) => {
+                        (first.is_alphabetic() || first == '_')
+                            && chars.all(|c| c.is_alphanumeric() || c == '_')
                     }
+                    None => false,
+                };
+
+                if !is_valid {
+                    println!("declare: `{}': not a valid identifier", parts[0]);
+                    continue;
                 }
+
                 variables.insert(p[0].to_string(), p[1].to_string());
             }
         } else if command == "jobs" {
