@@ -332,15 +332,9 @@ fn main() {
             let parts = parse_args(&command[8..]);
             //println!("DEBUG parts: {:?}", parts);
 
-            if parts.get(0).map(|s| s.as_str()) == Some("-p") {
-
-                if let Spme(name) = parts.get(1);
+            if let Some(name) = parts.get(1) {
                 if variables.contains_key(name) {
-                    println!(
-                        "declare -- {}=\"{}\"",
-                        name,
-                        variables[name]
-                    );
+                    println!("declare -- {}=\"{}\"", name, variables[name]);
                 } else {
                     println!("declare: {}: not found", name)
                 }
