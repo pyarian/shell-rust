@@ -328,7 +328,14 @@ fn main() {
                     }
                 }
             }
-        } else if command == "declare" {
+        } else if command.starts_with("declare ") {
+            let parts = parse_args(&command[8..]);
+
+            if parts.get(0).map(|s| s.as_str()) == Some("-p") {
+                if let Some(name) = parts.get(1) {
+                    println!("declare: {}: not found", parts[1])
+                }
+            }
         } else if command == "jobs" {
             check_jobs(&mut jobs);
             let len = jobs.len();
