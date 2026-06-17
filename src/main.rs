@@ -195,7 +195,7 @@ fn run_builtin(program: &str, args: &[String]) {
             if let Some(arg) = args.first {
                 println!("{} is a shell builtin", arg);
             } else {
-                println!("{}: not found", arg);
+                println!("{}: not found", args);
             }
         }
         _ => {}
