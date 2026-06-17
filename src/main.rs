@@ -199,7 +199,16 @@ fn run_pipeline(commands: &[&str]) {
         let is_last = i == commands.len() - 1;
 
         let mut cmd = std::process::Command::new(program);
-        cmd.arg(&args);
+        cmd.args(&args);
+
+        if is_builtin(program) && !is_last {
+            let (reader, mut writer) = pipe().unwrap();
+            let output = args.join(" ");
+            writeln!(writer, "{}", output).unwrap();
+            drop(writer);
+            previous_reader = Some(reader);
+            continue;
+        }
 
         if let Some(reader) = previous_reader.take() {
             cmd.stdin(reader);
@@ -259,67 +268,6 @@ fn main() {
 
         if pipeline_parts.len() >= 2 {
             run_pipeline(&pipeline_parts);
-            // let cmd1 = parse_args(pipeline_parts[0]);
-            // let cmd2 = parse_args(pipeline_parts[1]);
-
-            // let cmd1_program = &cmd1[0];
-            // let cmd1_args = &cmd1[1..];
-            // let cmd2_program = &cmd2[0];
-            // let cmd2_args = &cmd2[1..];
-
-            // let cmd1_is_builtin = is_builtin(cmd1_program);
-            // let cmd2_is_builtin = is_builtin(cmd2_program);
-
-            // if cmd1_is_builtin && !cmd2_is_builtin {
-            //     let (reader, mut writer) = pipe().unwrap();
-
-            //     let mut child2 = std::process::Command::new(cmd2_program)
-            //         .args(cmd2_args)
-            //         .stdin(reader)
-            //         .spawn()
-            //         .unwrap();
-
-            //     if cmd1_program == "echo" {
-            //         let output = cmd1_args.join(" ");
-            //         writeln!(writer, "{}", output).unwrap();
-            //     }
-
-            //     drop(writer);
-            //     child2.wait().unwrap();
-            // } else if !cmd1_is_builtin && cmd2_is_builtin {
-            //     let mut child1 = std::process::Command::new(cmd1_program)
-            //         .args(cmd1_args)
-            //         .stdout(Stdio::null())
-            //         .spawn()
-            //         .unwrap();
-
-            //     if cmd2_program == "type" {
-            //         if let Some(arg) = cmd2_args.first() {
-            //             if is_builtin(arg) {
-            //                 println!("{} is a shell builtin", arg);
-            //             } else {
-            //                 println!("{}: not found", arg);
-            //             }
-            //         }
-            //     }
-
-            //     child1.wait().unwrap();
-            // } else {
-            //     let mut child1 = std::process::Command::new(cmd1_program)
-            //         .args(cmd1_args)
-            //         .stdout(Stdio::piped())
-            //         .spawn()
-            //         .unwrap();
-
-            //     let mut child2 = std::process::Command::new(cmd2_program)
-            //         .args(cmd2_args)
-            //         .stdin(child1.stdout.take().unwrap())
-            //         .spawn()
-            //         .unwrap();
-
-            //     child1.wait().unwrap();
-            //     child2.wait().unwrap();
-            // }
         } else if command == "exit" {
             break;
         } else if command.starts_with("echo ") {
