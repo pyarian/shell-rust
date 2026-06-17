@@ -188,6 +188,20 @@ fn is_builtin(cmd: &str) -> bool {
     matches!(cmd, "echo" | "type" | "pwd" | "cd" | "exit" | "jobs")
 }
 
+fn run_builtin(program: &str, args: &[String]) {
+    match program {
+        "echo" => println!("{}", args.join("")),
+        "type" => {
+            if let Some(arg) = args.first {
+                println!("{} is a shell builtin", arg);
+            } else {
+                println!("{}: not found", arg);
+            }
+        }
+        _ => {}
+    }
+}
+
 fn run_pipeline(commands: &[&str]) {
     let mut previous_reader: Option<os_pipe::PipeReader> = None;
     let mut children = vec![];
@@ -201,12 +215,16 @@ fn run_pipeline(commands: &[&str]) {
         let mut cmd = std::process::Command::new(program);
         cmd.args(&args);
 
-        if is_builtin(program) && !is_last {
-            let (reader, mut writer) = pipe().unwrap();
-            let output = args.join(" ");
-            writeln!(writer, "{}", output).unwrap();
-            drop(writer);
-            previous_reader = Some(reader);
+        if is_builtin(program) {
+            if is_last {
+                run_builtin(program, &args);
+            } else {
+                let (reader, mut writer) = pipe().unwrap();
+                let output = args.join(" ");
+                writeln!(writer, "{}", output).unwrap();
+                drop(writer);
+                previous_reader = Some(reader);
+            }
             continue;
         }
 
