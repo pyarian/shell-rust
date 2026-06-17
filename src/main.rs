@@ -1,12 +1,12 @@
+use os_pipe::pipe;
+use std::collections::HashMap;
 use std::{
+    collections::HashMap,
     fs::File,
     io::{self, Write},
     os::unix::fs::PermissionsExt,
-    path::Path,
-    //process::Stdio,
+    path::Path, //process::Stdio,
 };
-
-use os_pipe::pipe;
 
 fn parse_args(input: &str) -> Vec<String> {
     let mut args: Vec<String> = Vec::new();
@@ -250,6 +250,7 @@ fn run_pipeline(commands: &[&str]) {
 
 fn main() {
     let mut jobs: Vec<Job> = Vec::new();
+    let mut variables: HashMap<String, String> = HashMap::new();
 
     loop {
         if !jobs.is_empty() {
@@ -332,9 +333,18 @@ fn main() {
             let parts = parse_args(&command[8..]);
 
             if parts.get(0).map(|s| s.as_str()) == Some("-p") {
-                if let Some(name) = parts.get(1) {
+                if variables.contains_key(parts.get(1).unwrap()) {
+                    println!(
+                        "declare -- {}=\"{}\"",
+                        parts.get(1).unwrap(),
+                        variables[parts.get(1).unwrap()],
+                    );
+                } else {
                     println!("declare: {}: not found", parts[1])
                 }
+            } else {
+                let p: Vec<&str> = parts[1].split('=').map(|s| s.trim()).collect();
+                variables.insert(p[0].to_string(), p[1].to_string());
             }
         } else if command == "jobs" {
             check_jobs(&mut jobs);
