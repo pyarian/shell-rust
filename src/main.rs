@@ -3,7 +3,7 @@ use std::{
     io::{self, Write},
     os::unix::fs::PermissionsExt,
     path::Path,
-    process::Stdio,
+    //process::Stdio,
 };
 
 use os_pipe::pipe;
@@ -190,12 +190,14 @@ fn is_builtin(cmd: &str) -> bool {
 
 fn run_builtin(program: &str, args: &[String]) {
     match program {
-        "echo" => println!("{}", args.join("")),
+        "echo" => println!("{}", args.join(" ")),
         "type" => {
-            if let Some(arg) = args.first {
-                println!("{} is a shell builtin", arg);
-            } else {
-                println!("{}: not found", args);
+            if let Some(arg) = args.first() {
+                if is_builtin(arg) {
+                    println!("{} is a shell builtin", arg);
+                } else {
+                    println!("{}: not found", arg);
+                }
             }
         }
         _ => {}
