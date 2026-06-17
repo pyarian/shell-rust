@@ -300,7 +300,7 @@ fn main() {
         } else if command.starts_with("type ") {
             let cmd = command.split_whitespace().nth(1).unwrap();
             match cmd {
-                "echo" | "exit" | "type" | "pwd" | "cd" | "jobs" => {
+                "echo" | "exit" | "type" | "pwd" | "cd" | "jobs" | "declare" => {
                     println!("{} is a shell builtin", cmd);
                 }
                 _ => {
@@ -328,6 +328,7 @@ fn main() {
                     }
                 }
             }
+        } else if command == "declare" {
         } else if command == "jobs" {
             check_jobs(&mut jobs);
             let len = jobs.len();
