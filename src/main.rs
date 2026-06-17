@@ -330,6 +330,7 @@ fn main() {
             }
         } else if command.starts_with("declare ") {
             let parts = parse_args(&command[8..]);
+            println!("DEBUG parts: {:?}", parts);
 
             if parts.get(0).map(|s| s.as_str()) == Some("-p") {
                 if variables.contains_key(parts.get(1).unwrap()) {
@@ -342,8 +343,9 @@ fn main() {
                     println!("declare: {}: not found", parts[1])
                 }
             } else {
-                let p: Vec<&str> = parts[1].split('=').map(|s| s.trim()).collect();
-                variables.insert(p[0].to_string(), p[1].to_string());
+                //let p: Vec<&str> = parts[1].split('=').map(|s| s.trim()).collect();
+
+                //variables.insert(p[0].to_string(), p[1].to_string());
             }
         } else if command == "jobs" {
             check_jobs(&mut jobs);
