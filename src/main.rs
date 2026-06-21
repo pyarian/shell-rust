@@ -203,15 +203,43 @@ fn run_builtin(program: &str, args: &[String]) {
     }
 }
 
+fn expand_one_string(s: &str, variables: &HashMap<String, String>) -> String {
+    let mut result = String::new();
+    let mut chars = s.chars().peekable();
+
+    while let Some(ch) = chars.next() {
+        if ch == '$' {
+            let mut name = String::new();
+
+            while let Some(&next_ch) = chars.peek() {
+                if next_ch.is_alphanumeric() || next_ch == '_' {
+                    name.push(next_ch);
+                    chars.next();
+                } else {
+                    break;
+                }
+            }
+
+            if !name.is_empty() {
+                if let Some(value) = variables.get(&name) {
+                    result.push_str(value);
+                }
+                // if name not found, expands to empty string (bash behavior)
+            } else {
+                // lone $ with nothing after it, keep it literal
+                result.push('$');
+            }
+        } else {
+            result.push(ch);
+        }
+    }
+
+    result
+}
+
 fn expand_variables(args: Vec<String>, variables: &HashMap<String, String>) -> Vec<String> {
     args.into_iter()
-        .map(|arg| {
-            if let Some(name) = arg.strip_prefix('$') {
-                variables.get(name).cloned().unwrap_or_default()
-            } else {
-                arg
-            }
-        })
+        .map(|arg| expand_one_string(&arg, variables))
         .collect()
 }
 
