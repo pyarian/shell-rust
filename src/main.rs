@@ -1,11 +1,10 @@
 use os_pipe::pipe;
 use std::{
-    clone,
     collections::HashMap,
     fs::File,
     io::{self, Write},
     os::unix::fs::PermissionsExt,
-    path::Path, //process::Stdio,
+    path::Path,
 };
 
 fn parse_args(input: &str) -> Vec<String> {
@@ -204,12 +203,29 @@ fn run_builtin(program: &str, args: &[String]) {
     }
 }
 
-fn run_pipeline(commands: &[&str]) {
+fn expand_variables(args: Vec<String>, variables: &HashMap<String, String>) -> Vec<String> {
+    args.into_iter()
+        .map(|arg| {
+            if let Some(name) = arg.strip_prefix('$') {
+                variables.get(name).cloned().unwrap_or_default()
+            } else {
+                arg
+            }
+        })
+        .collect()
+}
+
+fn parse_and_expand(input: &str, variables: &HashMap<String, String>) -> Vec<String> {
+    let parts = parse_args(input);
+    expand_variables(parts, variables)
+}
+
+fn run_pipeline(commands: &[&str], variables: &HashMap<String, String>) {
     let mut previous_reader: Option<os_pipe::PipeReader> = None;
     let mut children = vec![];
 
     for (i, command) in commands.iter().enumerate() {
-        let parts = parse_args(command);
+        let parts = parse_and_expand(command, variables);
         let program = &parts[0];
         let args = parts[1..].to_vec();
         let is_last = i == commands.len() - 1;
@@ -246,18 +262,6 @@ fn run_pipeline(commands: &[&str]) {
     for child in &mut children {
         child.wait().unwrap();
     }
-}
-
-fn expand_variables(args: Vec<String>, variables: &HashMap<String, String>) -> Vec<String> {
-    args.into_iter()
-        .map(|arg| {
-            if let Some(name) = arg.strip_prefix('$') {
-                variables.get(name).cloned().unwrap_or_default()
-            } else {
-                arg
-            }
-        })
-        .collect()
 }
 
 fn main() {
@@ -300,11 +304,11 @@ fn main() {
         let pipeline_parts = parse_pipeline(command);
 
         if pipeline_parts.len() >= 2 {
-            run_pipeline(&pipeline_parts);
+            run_pipeline(&pipeline_parts, &variables);
         } else if command == "exit" {
             break;
         } else if command.starts_with("echo ") {
-            let parts = parse_args(&command[5..]);
+            let parts = parse_and_expand(&command[5..], &variables);
             let output = parts.join(" ");
             match stdout_file {
                 Some(mut file) => writeln!(file, "{}", output).unwrap(),
@@ -343,7 +347,6 @@ fn main() {
             }
         } else if command.starts_with("declare ") {
             let parts = parse_args(&command[8..]);
-            //println!("DEBUG parts: {:?}", parts);
 
             if let Some(name) = parts.get(1) {
                 if variables.contains_key(name) {
@@ -409,8 +412,7 @@ fn main() {
                 println!("{}: No such file or directory", new_dir);
             }
         } else {
-            let mut parts = parse_args(command);
-            parts = expand_variables(parts, &variables);
+            let mut parts = parse_and_expand(command, &variables);
             let background = parts.last().map(|x| x == "&").unwrap_or(false);
             if background {
                 parts.pop();
