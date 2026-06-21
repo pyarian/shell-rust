@@ -209,25 +209,42 @@ fn expand_one_string(s: &str, variables: &HashMap<String, String>) -> String {
 
     while let Some(ch) = chars.next() {
         if ch == '$' {
-            let mut name = String::new();
+            if chars.peek() == Some(&'{') {
+                chars.next(); // consume the '{'
 
-            while let Some(&next_ch) = chars.peek() {
-                if next_ch.is_alphanumeric() || next_ch == '_' {
+                let mut name = String::new();
+                while let Some(&next_ch) = chars.peek() {
+                    if next_ch == '}' {
+                        break;
+                    }
                     name.push(next_ch);
                     chars.next();
-                } else {
-                    break;
                 }
-            }
 
-            if !name.is_empty() {
+                chars.next(); // consume the '}'
+
                 if let Some(value) = variables.get(&name) {
                     result.push_str(value);
                 }
-                // if name not found, expands to empty string (bash behavior)
             } else {
-                // lone $ with nothing after it, keep it literal
-                result.push('$');
+                let mut name = String::new();
+
+                while let Some(&next_ch) = chars.peek() {
+                    if next_ch.is_alphanumeric() || next_ch == '_' {
+                        name.push(next_ch);
+                        chars.next();
+                    } else {
+                        break;
+                    }
+                }
+
+                if !name.is_empty() {
+                    if let Some(value) = variables.get(&name) {
+                        result.push_str(value);
+                    }
+                } else {
+                    result.push('$');
+                }
             }
         } else {
             result.push(ch);
